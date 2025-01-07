@@ -1698,21 +1698,30 @@ class pbx_probe():
     ##############################################################################
     
     # Function: Wordcloud 
-    def word_cloud_plot(self, entry = 'kwp', size_x = 10, size_y = 10, wordsn = 500):
+    def word_cloud_plot(self, entry = 'kwp', size_x = 10, size_y = 10, wordsn = 500, rmv_custom_words = []):
         if  (entry == 'kwp'):
             corpora = ' '.join(self.kid_)
+            corpora = corpora.lower()
         elif (entry == 'kwa'):
-            corpora = ' '.join(self.auk_)  
+            corpora = ' '.join(self.auk_)
+            corpora = corpora.lower()
         elif (entry == 'abs'):
             abs_    = self.data['abstract']
             abs_    = list(abs_)
             abs_    = [x for x in abs_ if str(x) != 'nan']
             corpora = ' '.join(abs_)
+            corpora = corpora.lower()
         elif (entry == 'title'):
             tit_    = self.data['title']
             tit_    = list(tit_)
             tit_    = [x for x in tit_ if str(x) != 'nan']
             corpora = ' '.join(tit_)
+            corpora = corpora.lower()
+        if (len(rmv_custom_words) > 0):
+            text    = corpora.split()
+            text    = [x.replace(' ', '') for x in text if x.replace(' ', '') not in rmv_custom_words]
+            corpora = ' '.join(text) 
+            corpora = corpora.lower()
         wordcloud = WordCloud(background_color = 'white', 
                               max_words        = wordsn, 
                               contour_width    = 25, 
@@ -4122,7 +4131,7 @@ class pbx_probe():
         return
     
     # Function: Citation History Network
-    def network_hist(self, view = 'browser', min_links = 0, chain = [], path = True, node_size = 20, node_labels = True):
+    def network_hist(self, view = 'browser', min_links = 0, chain = [], path = True, node_size = 20, node_labels = True, dist = 1.2):
         
         ############################################################################
                      
@@ -4177,7 +4186,7 @@ class pbx_probe():
             indices = articles.index[articles['year'] == yr].tolist()
             indices = sorted(indices, key = lambda x: self.natsort(str(articles.loc[x, 'id'])))
             count   = len(indices)
-            offsets = [i*1.2 for i in range(0, count)]
+            offsets = [i*dist for i in range(0, count)]
             for idx, art_idx in enumerate(indices):
                 y_offsets[art_idx] = offsets[idx]
         articles['y_pos'] = [y_offsets[i] for i in articles.index]
