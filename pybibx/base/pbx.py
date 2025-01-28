@@ -1721,7 +1721,6 @@ class pbx_probe():
             text    = corpora.split()
             text    = [x.replace(' ', '') for x in text if x.replace(' ', '') not in rmv_custom_words]
             corpora = ' '.join(text) 
-            corpora = corpora.lower()
         wordcloud = WordCloud(background_color = 'white', 
                               max_words        = wordsn, 
                               contour_width    = 25, 
@@ -2863,7 +2862,7 @@ class pbx_probe():
         return dtm
    
     # Function: Projection
-    def docs_projection(self, view = 'browser', corpus_type = 'abs', stop_words = ['en'], rmv_custom_words = [], custom_label = [], custom_projection = [], n_components = 2, n_clusters = 5, node_labels = True, node_size = 25, node_font_size = 10, tf_idf = True, embeddings = False, method = 'tsvd'):
+    def docs_projection(self, view = 'browser', corpus_type = 'abs', stop_words = ['en'], rmv_custom_words = [], custom_label = [], custom_projection = [], n_components = 2, n_clusters = 5, node_labels = True, node_size = 25, node_font_size = 10, tf_idf = True, embeddings = False, method = 'tsvd', showlegend = False):
         if   (corpus_type == 'abs'):
             corpus = self.data['abstract']
             corpus = corpus.tolist()
@@ -2941,7 +2940,7 @@ class pbx_probe():
                                       name      = ''
                                       ))
             
-        layout  = go.Layout(showlegend   = False,
+        layout  = go.Layout(showlegend   = showlegend,
                             hovermode    = 'closest',
                             margin       = dict(b = 10, l = 5, r = 5, t = 10),
                             plot_bgcolor = '#f5f5f5',
@@ -4453,7 +4452,7 @@ class pbx_probe():
         
     # Function: Topics - Reduce
     def topics_reduction(self, topicsn = 3):
-        self.topics, self.probs = self.topic_model.reduce_topics(self.topic_corpus, self.topics, self.probs, nr_topics = topicsn - 1)
+        self.topics, self.probs = self.topic_model.reduce_topics(docs = self.topic_corpus, nr_topics = topicsn - 1)
         self.topic_info         = self.topic_model.get_topic_info()
         print(self.topic_info)
         return self 
