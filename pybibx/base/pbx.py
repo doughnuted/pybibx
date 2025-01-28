@@ -535,8 +535,7 @@ class pbx_probe():
             for author in authors:
                 self.author_to_papers[author].append(paper_idx)
         self.kid, self.u_kid    = self.__get_str(entry = 'keywords', s = ';', lower = True, sorting = True)
-        if ('unknown' in self.u_kid):
-            self.u_kid.remove('unknown')
+        self.u_kid              = [kid for kid in self.u_kid if kid.lower() != 'unknown']
         self.kid_               = [item for sublist in self.kid for item in sublist]
         self.kid_count          = [self.kid_.count(item) for item in self.u_kid]
         idx                     = sorted(range(len(self.kid_count)), key = self.kid_count.__getitem__)
@@ -544,8 +543,7 @@ class pbx_probe():
         self.u_kid              = [self.u_kid[i] for i in idx]
         self.kid_count          = [self.kid_count[i] for i in idx]
         self.auk, self.u_auk    = self.__get_str(entry = 'author_keywords', s = ';', lower = True, sorting = True)
-        if ('unknown' in self.u_auk):
-            self.u_auk.remove('unknown')
+        self.u_auk              = [auk for auk in self.u_auk if auk.lower() != 'unknown']
         self.auk_               = [item for sublist in self.auk for item in sublist]
         self.auk_count          = [self.auk_.count(item) for item in self.u_auk]
         idx                     = sorted(range(len(self.auk_count)), key = self.auk_count.__getitem__)
@@ -553,8 +551,7 @@ class pbx_probe():
         self.u_auk              = [self.u_auk[i] for i in idx]
         self.auk_count          = [self.auk_count[i] for i in idx]
         self.jou, self.u_jou    = self.__get_str(entry = 'abbrev_source_title', s = ';', lower = True, sorting = True)
-        if ('unknown' in self.u_jou):
-            self.u_jou.remove('unknown')
+        self.u_jou              = [jou for jou in self.u_jou if jou.lower() != 'unknown']
         jou_                    = [item for sublist in self.jou for item in sublist]
         self.jou_count          = [jou_.count(item) for item in self.u_jou]
         idx                     = sorted(range(len(self.jou_count)), key = self.jou_count.__getitem__)
@@ -580,8 +577,7 @@ class pbx_probe():
         self.dy_ref             = self.__get_ref_year()
         self.natsort            = lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', s)]  
         self.dy_c_year          = self.__get_collaboration_year()
-        if ('UNKNOWN' in self.u_ref):
-            self.u_ref.remove('UNKNOWN')
+        self.u_ref              = [ref for ref in self.u_ref if ref.lower() != 'unknown']
         self.__id_document()
         self.__id_author()
         self.__id_source()
