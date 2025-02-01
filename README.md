@@ -27,10 +27,11 @@ General Capabilities:
 - j) Creates an **Evolution Plot (interactive plot)** based on Abstracts, Titles, Sources, Authors Keywords or Keywords Plus
 - k) Creates an **Evolution Plot Complement (interactive plot)** based on Abstracts, Titles, Sources, Authors Keywords or Keywords Plus
 - l) Creates a **Sankey Diagram (interactive plot)** with any combination of the following keys: Authors, Countries, Institutions, Journals, Auhors_Keywords, Keywords_Plus, and/or Languages
-- m) Creates a **TreeMap** from the Authors, Countries, Institutions, Journals, Auhors_Keywords, or Keywords_Plus
-- n) Creates an **Authors Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each author
-- o) Creates a **Countries Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each country (each author's country)
-- p) Creates a **Bar Plot**  for the following statistics: Documents per Year, Citations per Year, Past Citations per Year, Lotka's Law, Sources per Documents, Sources per Citations, Authors per Documents, Authors per Citations, Authors per H-Index, Bradford's Law (Core Sources 1, 2 or 3), Institutions per Documents, Institutions per Citations, Countries per Documents, Countries per Citations, Language per Documents, Keywords Plus per Documents and Authors' Keywords per Documents
+- m) Creates a **X Y Bar Chart** (interactive plot) that displays the count of a specified Y-key for each category defined by a specified X-key. The plot visualizes the distribution of entities such as Authors, Countries, Institutions, Journals, Authors_Keywords, Keywords_Plus, and/or Languages. For example, it can show how many Authors are associated with each Country. 
+- n) Creates a **TreeMap** from the Authors, Countries, Institutions, Journals, Auhors_Keywords, or Keywords_Plus
+- o) Creates an **Authors Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each author
+- p) Creates a **Countries Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each country (each author's country)
+- q) Creates a **Bar Plot**  for the following statistics: Documents per Year, Citations per Year, Past Citations per Year, Lotka's Law, Sources per Documents, Sources per Citations, Authors per Documents, Authors per Citations, Authors per H-Index, Bradford's Law (Core Sources 1, 2 or 3), Institutions per Documents, Institutions per Citations, Countries per Documents, Countries per Citations, Language per Documents, Keywords Plus per Documents and Authors' Keywords per Documents
 
 Network Capabilities:
 - a) **Collaboration Plot** between Authors, Countries, Institutions, Authors' Keywords or Keywords Plus
