@@ -103,7 +103,7 @@ class pbx_probe():
         db                     = db.lower()
         self.database          = db
         self.institution_names =  [ 
-                                   'acad', 'academy', 'akad', 'aachen', 'assoc', 'cambridge', 'ctr',
+                                   'acad', 'academy', 'akad', 'aachen', 'assoc', 'cambridge',
                                    'cefet', 'center', 'centre', 'ctr',  'chuo kikuu', 'cient', 'cirad',
                                    'coll', 'college', 'colegio', 'companhia', 'communities', 'conservatory', 
                                    'council', 'dept', 'egyetemi', 'escola', 'education', 'escuela', 
@@ -514,6 +514,7 @@ class pbx_probe():
         self.author_inst_map    = -1
         self.corr_a_inst_map    = -1
         self.frst_a_inst_map    = -1  
+        self.top_y_x            = -1
         self.data['year']       = self.data['year'].replace('UNKNOWN', '0')
         self.dy                 = pd.to_numeric(self.data['year'], downcast = 'float')
         self.date_str           = int(self.dy.min())
@@ -564,10 +565,12 @@ class pbx_probe():
         lan_                    = [item for sublist in self.lan for item in sublist]
         self.lan_count          = [lan_.count(item) for item in self.u_lan]
         self.ctr, self.u_ctr    = self.__get_countries()
+        self.ctr                = self.replace_unknowns(self.ctr)
         ctr_                    = [self.ctr[i][j] for i in range(0, len(self.aut)) for j in range(0, len(self.aut[i]))]
         self.ctr_count          = [ctr_.count(item) for item in self.u_ctr]
         self.ctr_cit            = self.__get_counts(self.u_ctr, self.ctr, self.citation)
         self.uni, self.u_uni    = self.__get_institutions() 
+        self.uni                = self.replace_unknowns(self.uni)
         uni_                    = [item for sublist in self.uni for item in sublist]
         self.uni_count          = [uni_.count(item) for item in self.u_uni]
         self.uni_cit            = self.__get_counts(self.u_uni, self.uni, self.citation)
@@ -1545,6 +1548,8 @@ class pbx_probe():
                                             'usa':             'united states of america',
                                             'vietnam':         'viet nam',
                                         }
+        data['processed_affiliation'] = data['processed_affiliation'].replace('united states of america', 'usa', regex = True)
+        data['processed_affiliation'] = data['processed_affiliation'].replace('united states', 'usa', regex = True)
         data['processed_affiliation'] = data['processed_affiliation'].replace(country_replacements, regex = True)
         self.author_country_map       = {author: [] for author in self.u_aut}
         for index, row in data.iterrows():
@@ -1564,6 +1569,21 @@ class pbx_probe():
         ctr, u_ctr = get_additional_country_data()
         return ctr, u_ctr 
 
+    # Function: Replace Unknows  
+    def replace_unknowns(self, list_of_lists):
+        new_list = []
+        for sublist in list_of_lists:
+            new_sublist = []
+            prev_value  = None
+            for item in sublist:
+                if (item == 'UNKNOWN'):
+                    new_sublist.append(prev_value if prev_value is not None else 'UNKNOWN')
+                else:
+                    new_sublist.append(item)
+                    prev_value = item
+            new_list.append(new_sublist)
+        return new_list
+    
     # Function: Get Institutions   
     def __get_institutions(self):
         
@@ -2522,128 +2542,227 @@ class pbx_probe():
         fig.show()
         return
 
-    # Function: Sankey Diagram
-    def sankey_diagram(self, view = 'browser', entry = ['aut', 'cout', 'inst'], topn = 20): 
-        
-        ############################################################################
-        
-        def sort_count(u_lst, count_lst):
-            idx   = sorted(range(0, len(count_lst)), key = count_lst.__getitem__)
-            idx.reverse()
-            u_lst = [u_lst[i] for i in idx]
-            return u_lst  
-        
-        ############################################################################
-        
+    # Function: Plot Y per X
+    def plot_count_y_per_x(self, view = 'browser', rmv_unknowns = True, x = 'cout', y = 'aut', topn_x = 5, topn_y = 5, text_font_size = 12, x_angle = -90):
         if (view == 'browser'):
             pio.renderers.default = 'browser'
+        sk_data = pd.DataFrame({ 'aut' : self.aut,
+                                 'cout': self.ctr,
+                                 'inst': self.uni,
+                                 'jou' : self.jou,
+                                 'kwa' : self.auk,
+                                 'kwp' : self.kid,
+                                 'lan' : self.lan})
+        sk_data = sk_data[[x, y]]
+        
+        ############################################################################
+            
+        def enumerate_relationships(sk_data, entry, rmv_unknowns):
+            rel_lists = []  
+            for i in range(0, len(entry) - 1):
+                source_col = entry[i]
+                target_col = entry[i + 1]
+                rel         = []
+                for _, row in sk_data.iterrows():
+                    sources, targets = row[source_col], row[target_col]
+                    if (len(sources) == len(targets)):
+                        pairs = list(zip(sources, targets)) 
+                    else:
+                        pairs = [(s, t) for s in sources for t in targets]  
+                    updated_pairs = []
+                    for a, b in pairs:
+                        a_unknown = 'unknown' in str(a).lower()
+                        b_unknown = 'unknown' in str(b).lower()
+                        if (rmv_unknowns == True):
+                            if not a_unknown and not b_unknown:
+                                updated_pairs.append((a, b))
+                        else:
+                            if a_unknown and b_unknown:
+                                updated_pairs.append((f"UNKNOWN_{source_col}", f"UNKNOWN_{target_col}"))
+                            elif a_unknown:
+                                updated_pairs.append((f"UNKNOWN_{source_col}", b))
+                            elif b_unknown:
+                                updated_pairs.append((a, f"UNKNOWN_{target_col}"))
+                            else:
+                                updated_pairs.append((a, b))
+                    rel.extend(updated_pairs)  
+                rel_lists.append(rel)  
+            return rel_lists
+
+        ############################################################################
+        
+        relationships     = enumerate_relationships(sk_data, entry = [x, y], rmv_unknowns = rmv_unknowns)
+        x_y_pairs         = relationships[0]
+        y_counts          = Counter(x_y_pairs)
+        y_df              = pd.DataFrame(y_counts.items(), columns = ['Pair', 'Count'])
+        y_df[['X', 'Y']]  = pd.DataFrame(y_df['Pair'].tolist(), index = y_df.index)
+        y_df.drop(columns = ['Pair'], inplace = True)
+        x_counts          = y_df.groupby('X')['Count'].sum().reset_index()
+        top_x             = x_counts.nlargest(topn_x, 'Count')['X'].tolist()
+        filtered_df       = y_df[y_df['X'].isin(top_x)]
+        filtered_df       = filtered_df.sort_values(['X', 'Count'], ascending = [True, False])
+        top_y_df          = filtered_df.groupby('X').head(topn_y)
+        self.top_y_x      = top_y_df
+        fig               = go.Figure()
+        for _, row in top_y_df.iterrows():
+            y_text = f"{row['Y']} ({row['Count']})" 
+            fig.add_trace(go.Bar(
+                x            = [row['X']], 
+                y            = [row['Count']], 
+                name         = row['Y'],  
+                text         = y_text, 
+                textposition = 'inside',
+                textfont     = dict(size = text_font_size), 
+                hoverinfo    = "x+y+text", 
+            ))
+        fig.update_layout(
+            title       = f"Distribution of {y.capitalize()} per {x.capitalize()}",
+            xaxis_title = x.capitalize(),
+            yaxis_title = y.capitalize(),
+            barmode     = 'stack',  
+            template    = 'plotly',
+            showlegend  = False,
+            xaxis       = dict( categoryorder = 'total descending',  tickangle = x_angle )
+            )
+        fig.show()
+        return
+
+    # Function: Sankey Diagram
+    def sankey_diagram(self, view = 'browser', entry = ['aut', 'cout', 'inst', 'jou', 'kwa', 'kwp', 'lan'], rmv_unknowns = False, topn = None): 
+        if (view == 'browser'):
+            pio.renderers.default = 'browser'
+        sk_data = pd.DataFrame({ 'aut' : self.aut,
+                                 'cout': self.ctr,
+                                 'inst': self.uni,
+                                 'jou' : self.jou,
+                                 'kwa' : self.auk,
+                                 'kwp' : self.kid,
+                                 'lan' : self.lan})
+        sk_data = sk_data[entry]
+        ############################################################################
+            
+        def count_entry(sk_data, entry):
+            sorted_lists = []
+            for e in entry:
+                flat_list     = [item for sublist in sk_data[e] for item in sublist]
+                counter       = Counter(flat_list)
+                sorted_counts = sorted(counter.items(), key = lambda x: x[1], reverse = True)
+                sorted_lists.append(sorted_counts)
+            return sorted_lists
+             
+        def enumerate_relationships(sk_data, entry, rmv_unknowns):
+            rel_lists = []  
+            for i in range(0, len(entry) - 1):
+                source_col = entry[i]
+                target_col = entry[i + 1]
+                rel         = []
+                for _, row in sk_data.iterrows():
+                    sources, targets = row[source_col], row[target_col]
+                    if (len(sources) == len(targets)):
+                        pairs = list(zip(sources, targets)) 
+                    else:
+                        pairs = [(s, t) for s in sources for t in targets]  
+                    updated_pairs = []
+                    for a, b in pairs:
+                        a_unknown = 'unknown' in str(a).lower()
+                        b_unknown = 'unknown' in str(b).lower()
+                        if (rmv_unknowns == True):
+                            if not a_unknown and not b_unknown:
+                                updated_pairs.append((a, b))
+                        else:
+                            if a_unknown and b_unknown:
+                                updated_pairs.append((f"UNKNOWN_{source_col}", f"UNKNOWN_{target_col}"))
+                            elif a_unknown:
+                                updated_pairs.append((f"UNKNOWN_{source_col}", b))
+                            elif b_unknown:
+                                updated_pairs.append((a, f"UNKNOWN_{target_col}"))
+                            else:
+                                updated_pairs.append((a, b))
+                    rel.extend(updated_pairs)  
+                rel_lists.append(rel)  
+            return rel_lists
+        
+        def get_top_items(pairs, target, topn = None):
+            item_counts  = Counter([b for a, b in pairs if a == target])
+            sorted_items = sorted(item_counts.items(), key = lambda x: x[1], reverse = True)
+            return sorted_items[:topn] if topn else sorted_items
+
+        def hierarchical_filtering(sk_data, entry, topn, rmv_unknowns):       
+            if (topn is None):
+                topn = [float('inf')] * (len(entry) - 1)
+            if (len(topn) != len(entry) - 1):
+                raise ValueError(f"topn must have length {len(entry) - 1}, received {len(topn)}.")
+            count_sorted_entries   = count_entry(sk_data, entry)
+            relationships          = enumerate_relationships(sk_data, entry, rmv_unknowns)
+            filtered_relationships = {}
+            prev_top_items         = [item[0] for item in count_sorted_entries[0][:topn[0]]]
+            prev_level_data        = {}
+            for a in prev_top_items:
+                possible_targets   = [b for (x, b) in relationships[0] if x == a]  
+                target_counts      = Counter(possible_targets) 
+                sorted_targets     = sorted(target_counts.items(), key = lambda x: x[1], reverse = True)  
+                prev_level_data[a] = [b for b, _ in sorted_targets[:topn[1]]]  
+            filtered_relationships[(entry[0], entry[1])] = Counter( [(a, b) for a in prev_top_items for b in prev_level_data[a]])
+            for i in range(1, len(entry) - 1):
+                source_col             = entry[i]
+                target_col             = entry[i + 1]
+                current_relationships  = relationships[i]
+                filtered_current_level = []
+                for source, targets in prev_level_data.items():
+                    for target in targets:
+                        possible_next_targets = [new_target for (x, new_target) in current_relationships if x == target]
+                        next_target_counts    = Counter(possible_next_targets)
+                        sorted_next_targets   = sorted(next_target_counts.items(), key = lambda x: x[1], reverse=True)
+                        top_targets           = [b for b, _ in sorted_next_targets[:topn[min(i, len(topn) - 1)]]]  
+                        filtered_current_level.extend([(target, new_target) for new_target in top_targets])
+                filtered_relationships[(source_col, target_col)] = Counter(filtered_current_level)
+                prev_level_data                                  = {}
+                for source, target in filtered_current_level:
+                    if (source not in prev_level_data):
+                        prev_level_data[source] = []
+                    prev_level_data[source].append(target)
+            return filtered_relationships
+
+        ############################################################################
+        
+        all_relationships = hierarchical_filtering(sk_data, entry, topn, rmv_unknowns)
+        relationships     = enumerate_relationships(sk_data, entry, rmv_unknowns)
+        all_pairs         = [pair for sublist in relationships for pair in sublist]
+        for (source_col, target_col), counter in all_relationships.items():
+            updated_counter = Counter()  
+            for (source, target) in counter.keys():
+                updated_counter[(source, target)] = all_pairs.count((source, target))  
+            all_relationships[(source_col, target_col)] = updated_counter
+        nodes             = set()
+        for (source_col, target_col), counter in all_relationships.items():
+            for (source, target), count in counter.items():
+                nodes.add(source)
+                nodes.add(target)
+        node_to_index    = {node: idx for idx, node in enumerate(nodes)}
+        sk_s, sk_t, sk_v = [], [], []
+        s, t, v          = [], [], []
+        for (source_col, target_col), counter in all_relationships.items():
+            for (source, target), count in counter.items():
+                sk_s.append(node_to_index[source])
+                sk_t.append(node_to_index[target])
+                sk_v.append(count)
+                s.append(source)
+                t.append(target)
+                v.append(count)
+        self.ask_gpt_sk = pd.DataFrame(list(zip(s, t, v)), columns = ['Node From', 'Node To', 'Connection Weigth'])
+                
+        ############################################################################
+        
         u_keys = ['aut', 'cout', 'inst', 'jou', 'kwa', 'kwp', 'lan']
         u_name = ['Authors', 'Countries', 'Institutions', 'Journals', 'Auhors_Keywords', 'Keywords_Plus', 'Languages']
-        u_idx  = [i for i in range(0, len(u_keys)) if u_keys[i] == entry[0]]
-        u_cnt  = [self.doc_aut, self.ctr_count, self.uni_count, self.jou_count, self.auk_count, self.kid_count, self.lan_count]
-        u_list = [self.aut, self.ctr, self.uni, self.jou, self.auk, self.kid, self.lan]
-        u_sort = [self.u_aut, self.u_ctr, self.u_uni, self.u_jou, self.u_auk, self.u_kid, self.u_lan]
-        u_sort = [u_sort[i] if i != u_idx[0] else sort_count(u_sort[i], u_cnt[i]) for i in range(0, len(u_sort)) ]
-        dict_e = dict( zip( u_keys, u_list ) )
-        dict_u = dict( zip( u_keys, u_sort ) )
         dict_n = dict( zip( u_keys, u_name ) )
-        list_e = []
-        list_u = []
-        sk_s   = []
-        sk_t   = []
-        sk_v   = []
-        for e in entry:
-            list_e.append(dict_e[e])
-            list_u.append(dict_u[e])
-            if ( e == entry[0] ):
-                start  = [0]
-                finish = [len(list_u[-1])-1]
-            else:
-                start.append(finish[-1]+1)
-                finish.append(start[-1]+len(list_u[-1])-1)
-        label  = [item for sublist in list_u for item in sublist if item != 'UNKNOWN']
-        for i in range(0, len(entry)):
-            label.append('UNKNOWN_'+dict_n[entry[i]])
-        dict_s = dict(  zip( label, list( range( 0, len(label) ) ) ) )
-        pairs  = [[] for _ in range(0, len(list_u)-1)]
-        for i in range(0, len(list_u)-1):
-            j = i + 1
-            for m in range(0, len(list_u[i])):
-                name_a = list_u[i][m]
-                idx_a  = [k for k in range(0, len(list_e[i])) if name_a in list_e[i][k] ]
-                name_a = name_a.replace('UNKNOWN', 'UNKNOWN_'+dict_n[entry[j-1]])
-                for n in idx_a:
-                    if (entry[i] != 'kwa' and entry[i] != 'kwp'):
-                        pos_a  = list_e[i][n].index(name_a.replace('UNKNOWN_'+dict_n[entry[j-1]], 'UNKNOWN'))
-                        pos_a  = np.clip(pos_a, 0, len(list_e[j][n])-1)
-                    else:
-                        pos_a  = 0
-                    if (entry[j] != 'kwa' and entry[j] != 'kwp'):
-                        if (len(list_e[j][n]) > 0):
-                            name_b = list_e[j][n][pos_a].replace('UNKNOWN', 'UNKNOWN_'+dict_n[entry[j]])
-                        else:
-                            name_b = 'UNKNOWN_'+dict_n[entry[j]]
-                        pairs[i].append([name_a, name_b])
-                    else:
-                        name_b = list_e[j][n]
-                        for name in name_b:
-                            pairs[i].append([name_a, name.replace('UNKNOWN', 'UNKNOWN_'+dict_n[entry[j]])])
-        for pair in pairs:
-            if (pair == pairs[0]):
-                u_pair = list(set([tuple(x) for x in pair]))
-                u_pair = [ [ item[0], item[1] ] for item in u_pair ]
-                u_vals = Counter(str(elem) for elem in pair)
-                u_vals = [u_vals[str(i)] for i in u_pair]
-                idx    = list(np.argsort(-np.array(u_vals), kind = 'stable'))
-                s_pair = [u_pair[i] for i in idx]
-                s_vals = [u_vals[i] for i in idx]
-                topn   = np.clip(topn, 0, len(s_vals))
-                u_next = [item[1] for item in s_pair]
-                u_next = u_next[:topn]
-                for i in range(0, topn):
-                    if (s_pair[i][0] != '' and s_pair[i][1] != ''):
-                        sk_s.append(dict_s[s_pair[i][0]])
-                        sk_t.append(dict_s[s_pair[i][1]])
-                        sk_v.append(s_vals[i])
-            else:
-                u_pair = list(set([tuple(x) for x in pair]))
-                u_pair = [[ item[0], item[1] ] for item in u_pair]
-                select = []
-                for p in range(0, len(u_pair)):
-                    b, _ = u_pair[p]
-                    if (b in u_next):
-                        select.append(b)
-                select = list(set(select))
-                for p in range(len(u_pair)-1, -1, -1):
-                    b, _ = u_pair[p]
-                    if (b not in select):
-                        del u_pair[p]
-                u_vals = Counter(str(elem) for elem in pair)
-                u_vals = [u_vals[str(i)] for i in u_pair]
-                idx    = list(np.argsort(-np.array(u_vals), kind = 'stable'))
-                s_pair = [u_pair[i] for i in idx]
-                s_vals = [u_vals[i] for i in idx]
-                topn   = np.clip(topn, 0, len(s_vals))
-                u_next = [ item[1] for item in s_pair]
-                u_next = u_next[:topn]
-                for i in range(0, topn):
-                    if (s_pair[i][0] != '' and s_pair[i][1] != ''):
-                        sk_s.append(dict_s[s_pair[i][0]])
-                        sk_t.append(dict_s[s_pair[i][1]])
-                        sk_v.append(s_vals[i])             
         if (len(sk_s) > len(self.color_names)):
             count = 0
             while (len(self.color_names) < len(sk_s)):
                 self.color_names.append(self.color_names[count])
                 count = count + 1
-        self.ask_gpt_sk = pd.DataFrame(list(zip(sk_s, sk_t, sk_v)), columns = ['Node From', 'Node To', 'Connection Weigth'])
-        for i in range(0, len(sk_s)):
-            source                     = label[self.ask_gpt_sk.iloc[i, 0]]
-            target                     = label[self.ask_gpt_sk.iloc[i, 1]]
-            self.ask_gpt_sk.iloc[i, 0] = source
-            self.ask_gpt_sk.iloc[i, 1] = target
-        link = dict(source = sk_s, target = sk_t,   value = sk_v, color = self.color_names)
-        node = dict(label  = label,   pad = 10, thickness = 15,   color = 'white')
+        link = dict(source = sk_s,        target = sk_t, value     = sk_v, color = self.color_names)
+        node = dict(label  = list(nodes), pad    = 10,   thickness = 15,   color = 'white')
         data = go.Sankey(
                           link        = link, 
                           node        = node, 
