@@ -5,8 +5,10 @@
 # email:  valdecy.pereira@gmail.com
 # pyBibX - A Bibliometric and Scientometric Library Powered with Artificial Intelligence Tools
 
-# Citation: 
-# PEREIRA, V. (2022). Project: pyBibX, File: pbibx.py, GitHub repository: <https://github.com/Valdecy/pyBibX>
+# Citation:
+# PEREIRA, V., BASILIO, M.P. and SANTOS, C.H.T. (2025). PyBibX: A Python Library for Bibliometric and
+# Scientometric Analysis Powered with Artificial Intelligence Tools. Data Technologies and Applications.
+# Vol. ahead-of-print No. ahead-of-print. doi: https://doi.org/10.1108/DTA-08-2023-0461
 
 ############################################################################
 
@@ -577,10 +579,10 @@ class pbx_probe():
         self.doc_aut            = self.__get_counts(self.u_aut, self.aut)
         self.av_doc_aut         = round(sum(self.doc_aut)/len(self.doc_aut), 2)
         self.t_c, self.s_c      = self.__total_and_self_citations()
-        self.dy_ref             = self.__get_ref_year()
         self.natsort            = lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', s)]  
         self.dy_c_year          = self.__get_collaboration_year()
         self.u_ref              = [ref for ref in self.u_ref if ref.lower() != 'unknown']
+        self.dy_ref             = self.__get_ref_year()
         self.__id_document()
         self.__id_author()
         self.__id_source()
@@ -972,7 +974,7 @@ class pbx_probe():
     # Function: Read .bib File
     def __read_bib(self, bib, db = 'scopus', del_duplicated = True):
         
-        ##############################################################################
+        #----------------------------------------------------------------------
         
         def assign_authors_to_affiliations(authors_str, affiliations_str):
             authors          = [a.strip() for a in authors_str.split(' and ')]
@@ -1023,7 +1025,7 @@ class pbx_probe():
             transformed_affiliation = '; '.join(new_affiliations)
             return transformed_affiliation
 
-        ##############################################################################
+        #----------------------------------------------------------------------
         
         self.vb        = []
         db             = db.lower()
@@ -1432,10 +1434,8 @@ class pbx_probe():
    
     # Function: Get Citations
     def __get_citations(self, series):
-        series = series.fillna('unknown').str.lower()
-        series = series.str.replace('cited by:?', '', regex = True)
         
-        ############################################################################
+        #----------------------------------------------------------------------
         
         def extract_numeric(value):
             try:
@@ -1447,8 +1447,10 @@ class pbx_probe():
                 match = re.search(r'\d+', value)
                 return int(match.group()) if match else 0
             
-        ############################################################################
+        #----------------------------------------------------------------------
         
+        series = series.fillna('unknown').str.lower()
+        series = series.str.replace('cited by:?', '', regex = True)
         return series.apply(extract_numeric).tolist()
 
     # Function: Get Past Citations per Year
@@ -1472,9 +1474,8 @@ class pbx_probe():
     
     # Function: Get Countries
     def __get_countries(self):
-        data = self.data.copy(deep = True)
-        
-        ##############################################################################
+                
+        #----------------------------------------------------------------------
         
         def preprocess_affiliation(row):
             source = row['source'].lower()
@@ -1519,8 +1520,9 @@ class pbx_probe():
                         self.frst_a_country_map[first_author] = self.author_country_map[first_author]
             return ctr, u_ctr
         
-        ##############################################################################
+        #----------------------------------------------------------------------
         
+        data = self.data.copy(deep    = True)
         data['processed_affiliation'] = data.apply(preprocess_affiliation, axis = 1).str.lower()
         country_replacements          = {
                                             ' usa':            ' united states of america',
@@ -1587,7 +1589,7 @@ class pbx_probe():
     # Function: Get Institutions   
     def __get_institutions(self):
         
-        #############################################################################
+        #----------------------------------------------------------------------
 
         def extract_top_institution_with_priority(text, institution_names):
             segments              = text.split(';')
@@ -1603,7 +1605,7 @@ class pbx_probe():
                     selected_institutions.append('UNKNOWN')
             return selected_institutions
 
-        #############################################################################
+        #----------------------------------------------------------------------
 
         sources                = self.data['source'].str.lower()
         affiliations           = (self.data['affiliation'].fillna('').str.lower() if 'affiliation' in self.data.columns else pd.Series([''] * len(self.data)) )
@@ -2541,7 +2543,40 @@ class pbx_probe():
             fig.update_xaxes(type = 'category', categoryorder = 'array', categoryarray = x)
         fig.show()
         return
-
+    
+    # Function: Enumerate Relationship
+    def enumerate_relationships(self, sk_data, entry, rmv_unknowns):
+        rel_lists = []  
+        for i in range(0, len(entry) - 1):
+            source_col = entry[i]
+            target_col = entry[i + 1]
+            rel         = []
+            for _, row in sk_data.iterrows():
+                sources, targets = row[source_col], row[target_col]
+                if (len(sources) == len(targets)):
+                    pairs = list(zip(sources, targets)) 
+                else:
+                    pairs = [(s, t) for s in sources for t in targets]  
+                updated_pairs = []
+                for a, b in pairs:
+                    a_unknown = 'unknown' in str(a).lower()
+                    b_unknown = 'unknown' in str(b).lower()
+                    if (rmv_unknowns == True):
+                        if not a_unknown and not b_unknown:
+                            updated_pairs.append((a, b))
+                    else:
+                        if a_unknown and b_unknown:
+                            updated_pairs.append((f"UNKNOWN_{source_col}", f"UNKNOWN_{target_col}"))
+                        elif a_unknown:
+                            updated_pairs.append((f"UNKNOWN_{source_col}", b))
+                        elif b_unknown:
+                            updated_pairs.append((a, f"UNKNOWN_{target_col}"))
+                        else:
+                            updated_pairs.append((a, b))
+                rel.extend(updated_pairs)  
+            rel_lists.append(rel)  
+        return rel_lists
+        
     # Function: Plot Y per X
     def plot_count_y_per_x(self, view = 'browser', rmv_unknowns = True, x = 'cout', y = 'aut', topn_x = 5, topn_y = 5, text_font_size = 12, x_angle = -90):
         if (view == 'browser'):
@@ -2553,45 +2588,8 @@ class pbx_probe():
                                  'kwa' : self.auk,
                                  'kwp' : self.kid,
                                  'lan' : self.lan})
-        sk_data = sk_data[[x, y]]
-        
-        ############################################################################
-            
-        def enumerate_relationships(sk_data, entry, rmv_unknowns):
-            rel_lists = []  
-            for i in range(0, len(entry) - 1):
-                source_col = entry[i]
-                target_col = entry[i + 1]
-                rel         = []
-                for _, row in sk_data.iterrows():
-                    sources, targets = row[source_col], row[target_col]
-                    if (len(sources) == len(targets)):
-                        pairs = list(zip(sources, targets)) 
-                    else:
-                        pairs = [(s, t) for s in sources for t in targets]  
-                    updated_pairs = []
-                    for a, b in pairs:
-                        a_unknown = 'unknown' in str(a).lower()
-                        b_unknown = 'unknown' in str(b).lower()
-                        if (rmv_unknowns == True):
-                            if not a_unknown and not b_unknown:
-                                updated_pairs.append((a, b))
-                        else:
-                            if a_unknown and b_unknown:
-                                updated_pairs.append((f"UNKNOWN_{source_col}", f"UNKNOWN_{target_col}"))
-                            elif a_unknown:
-                                updated_pairs.append((f"UNKNOWN_{source_col}", b))
-                            elif b_unknown:
-                                updated_pairs.append((a, f"UNKNOWN_{target_col}"))
-                            else:
-                                updated_pairs.append((a, b))
-                    rel.extend(updated_pairs)  
-                rel_lists.append(rel)  
-            return rel_lists
-
-        ############################################################################
-        
-        relationships     = enumerate_relationships(sk_data, entry = [x, y], rmv_unknowns = rmv_unknowns)
+        sk_data           = sk_data[[x, y]]        
+        relationships     = self.enumerate_relationships(sk_data, [x, y], rmv_unknowns)
         x_y_pairs         = relationships[0]
         y_counts          = Counter(x_y_pairs)
         y_df              = pd.DataFrame(y_counts.items(), columns = ['Pair', 'Count'])
@@ -2603,6 +2601,9 @@ class pbx_probe():
         filtered_df       = filtered_df.sort_values(['X', 'Count'], ascending = [True, False])
         top_y_df          = filtered_df.groupby('X').head(topn_y)
         self.top_y_x      = top_y_df
+        u_keys            = ['aut', 'cout', 'inst', 'jou', 'kwa', 'kwp', 'lan']
+        u_name            = ['Authors', 'Countries', 'Institutions', 'Journals', 'Auhors_Keywords', 'Keywords_Plus', 'Languages']
+        dict_n            = dict( zip( u_keys, u_name ) )
         fig               = go.Figure()
         for _, row in top_y_df.iterrows():
             y_text = f"{row['Y']} ({row['Count']})" 
@@ -2616,9 +2617,9 @@ class pbx_probe():
                 hoverinfo    = "x+y+text", 
             ))
         fig.update_layout(
-            title       = f"Distribution of {y.capitalize()} per {x.capitalize()}",
-            xaxis_title = x.capitalize(),
-            yaxis_title = y.capitalize(),
+            title       = f"Distribution of {str(dict_n[y]) } per {str(dict_n[x]) }",
+            xaxis_title = str(dict_n[x]) ,
+            yaxis_title = str(dict_n[y]) ,
             barmode     = 'stack',  
             template    = 'plotly',
             showlegend  = False,
@@ -2629,17 +2630,8 @@ class pbx_probe():
 
     # Function: Sankey Diagram
     def sankey_diagram(self, view = 'browser', entry = ['aut', 'cout', 'inst', 'jou', 'kwa', 'kwp', 'lan'], rmv_unknowns = False, topn = None): 
-        if (view == 'browser'):
-            pio.renderers.default = 'browser'
-        sk_data = pd.DataFrame({ 'aut' : self.aut,
-                                 'cout': self.ctr,
-                                 'inst': self.uni,
-                                 'jou' : self.jou,
-                                 'kwa' : self.auk,
-                                 'kwp' : self.kid,
-                                 'lan' : self.lan})
-        sk_data = sk_data[entry]
-        ############################################################################
+        
+        #----------------------------------------------------------------------
             
         def count_entry(sk_data, entry):
             sorted_lists = []
@@ -2649,38 +2641,6 @@ class pbx_probe():
                 sorted_counts = sorted(counter.items(), key = lambda x: x[1], reverse = True)
                 sorted_lists.append(sorted_counts)
             return sorted_lists
-             
-        def enumerate_relationships(sk_data, entry, rmv_unknowns):
-            rel_lists = []  
-            for i in range(0, len(entry) - 1):
-                source_col = entry[i]
-                target_col = entry[i + 1]
-                rel         = []
-                for _, row in sk_data.iterrows():
-                    sources, targets = row[source_col], row[target_col]
-                    if (len(sources) == len(targets)):
-                        pairs = list(zip(sources, targets)) 
-                    else:
-                        pairs = [(s, t) for s in sources for t in targets]  
-                    updated_pairs = []
-                    for a, b in pairs:
-                        a_unknown = 'unknown' in str(a).lower()
-                        b_unknown = 'unknown' in str(b).lower()
-                        if (rmv_unknowns == True):
-                            if not a_unknown and not b_unknown:
-                                updated_pairs.append((a, b))
-                        else:
-                            if a_unknown and b_unknown:
-                                updated_pairs.append((f"UNKNOWN_{source_col}", f"UNKNOWN_{target_col}"))
-                            elif a_unknown:
-                                updated_pairs.append((f"UNKNOWN_{source_col}", b))
-                            elif b_unknown:
-                                updated_pairs.append((a, f"UNKNOWN_{target_col}"))
-                            else:
-                                updated_pairs.append((a, b))
-                    rel.extend(updated_pairs)  
-                rel_lists.append(rel)  
-            return rel_lists
         
         def get_top_items(pairs, target, topn = None):
             item_counts  = Counter([b for a, b in pairs if a == target])
@@ -2693,7 +2653,7 @@ class pbx_probe():
             if (len(topn) != len(entry) - 1):
                 raise ValueError(f"topn must have length {len(entry) - 1}, received {len(topn)}.")
             count_sorted_entries   = count_entry(sk_data, entry)
-            relationships          = enumerate_relationships(sk_data, entry, rmv_unknowns)
+            relationships          = self.enumerate_relationships(sk_data, entry, rmv_unknowns)
             filtered_relationships = {}
             prev_top_items         = [item[0] for item in count_sorted_entries[0][:topn[0]]]
             prev_level_data        = {}
@@ -2721,13 +2681,22 @@ class pbx_probe():
                     if (source not in prev_level_data):
                         prev_level_data[source] = []
                     prev_level_data[source].append(target)
-            return filtered_relationships
+            return filtered_relationships, relationships 
 
-        ############################################################################
-        
-        all_relationships = hierarchical_filtering(sk_data, entry, topn, rmv_unknowns)
-        relationships     = enumerate_relationships(sk_data, entry, rmv_unknowns)
-        all_pairs         = [pair for sublist in relationships for pair in sublist]
+        #----------------------------------------------------------------------
+       
+        if (view == 'browser'):
+            pio.renderers.default = 'browser'
+        sk_data = pd.DataFrame({ 'aut' : self.aut,
+                                 'cout': self.ctr,
+                                 'inst': self.uni,
+                                 'jou' : self.jou,
+                                 'kwa' : self.auk,
+                                 'kwp' : self.kid,
+                                 'lan' : self.lan})
+        sk_data                           = sk_data[entry]
+        all_relationships, relationships  = hierarchical_filtering(sk_data, entry, topn, rmv_unknowns)
+        all_pairs                         = [pair for sublist in relationships for pair in sublist]
         for (source_col, target_col), counter in all_relationships.items():
             updated_counter = Counter()  
             for (source, target) in counter.keys():
@@ -2750,12 +2719,9 @@ class pbx_probe():
                 t.append(target)
                 v.append(count)
         self.ask_gpt_sk = pd.DataFrame(list(zip(s, t, v)), columns = ['Node From', 'Node To', 'Connection Weigth'])
-                
-        ############################################################################
-        
-        u_keys = ['aut', 'cout', 'inst', 'jou', 'kwa', 'kwp', 'lan']
-        u_name = ['Authors', 'Countries', 'Institutions', 'Journals', 'Auhors_Keywords', 'Keywords_Plus', 'Languages']
-        dict_n = dict( zip( u_keys, u_name ) )
+        u_keys         = ['aut', 'cout', 'inst', 'jou', 'kwa', 'kwp', 'lan']
+        u_name         = ['Authors', 'Countries', 'Institutions', 'Journals', 'Auhors_Keywords', 'Keywords_Plus', 'Languages']
+        dict_n         = dict( zip( u_keys, u_name ) )
         if (len(sk_s) > len(self.color_names)):
             count = 0
             while (len(self.color_names) < len(sk_s)):
@@ -2799,21 +2765,6 @@ class pbx_probe():
             h_i.append(h)
         return h_i
     
-    # Function: Total and Self Citations
-    def __total_and_self_citations_(self):
-        t_c = []
-        s_c = []
-        for researcher in self.u_aut:
-            total_citations = 0
-            self_citations  = 0
-            for i, authors in enumerate(self.aut):
-                if (researcher in authors):
-                    total_citations = total_citations + self.citation[i]
-                    self_citations  = self_citations  + sum(1 for ref in self.ref[i] if researcher in ref.lower())
-            t_c.append(total_citations)
-            s_c.append(self_citations)
-        return t_c, s_c
-
     def __total_and_self_citations(self):
         preprocessed_refs = [ [ref.lower() for ref in refs] for refs in self.ref ]
         t_c               = []
@@ -2836,21 +2787,18 @@ class pbx_probe():
     # Function: Text Pre-Processing
     def clear_text(self, corpus, stop_words = ['en'], lowercase = True, rmv_accents = True, rmv_special_chars = True, rmv_numbers = True, rmv_custom_words = [], verbose = False):
         sw_full = []
-        # Lower Case
         if (lowercase == True):
             if (verbose == True):
                 print('Lower Case: Working...')
             corpus = [str(x).lower().replace("’","'") for x in  corpus]
             if (verbose == True):
                 print('Lower Case: Done!')
-        # Remove Punctuation & Special Characters
         if (rmv_special_chars == True):
             if (verbose == True):
                 print('Removing Special Characters: Working...')
             corpus = [re.sub(r"[^a-zA-Z0-9']+", ' ', i) for i in corpus]
             if (verbose == True):
                 print('Removing Special Characters: Done!')
-        # Remove Stopwords
         if (len(stop_words) > 0):
             for sw_ in stop_words: 
                 if   (sw_ == 'ar' or sw_ == 'ara' or sw_ == 'arabic'):
@@ -2926,7 +2874,6 @@ class pbx_probe():
                    print('Removing Stopwords: ' + str(i + 1) +  ' of ' + str(len(corpus)) )
             if (verbose == True):
                 print('Removing Stopwords: Done!')
-        # Remove Custom Words
         if (len(rmv_custom_words) > 0):
             if (verbose == True):
                 print('Removing Custom Words: Working...')
@@ -2938,7 +2885,6 @@ class pbx_probe():
                    print('Removing Custom Words: ' + str(i + 1) +  ' of ' + str(len(corpus)) )
             if (verbose == True):
                 print('Removing Custom Word: Done!')
-        # Replace Accents 
         if (rmv_accents == True):
             if (verbose == True):
                 print('Removing Accents: Working...')
@@ -3254,8 +3200,7 @@ class pbx_probe():
         keys_2                   = self.data['doi'].str.lower().tolist()
         keys                     = np.where(sources.isin(['scopus', 'pubmed']), keys_1, np.where(sources == 'wos', keys_2, None))
         corpus                   = ' '.join(ref.lower() for ref in self.u_ref)
-        #matched_indices          = [i for i, key in enumerate(keys) if key and re.search(key, corpus)]
-        matched_indices = []
+        matched_indices          = []
         for i, key in enumerate(keys):
             if (key and key.strip()):
                 try:
@@ -3264,9 +3209,9 @@ class pbx_probe():
                         matched_indices.append(i)
                 except:
                     pass
-        insd_r                   = []
-        insd_t                   = []
-        u_ref_lower              = [ref.lower() for ref in self.u_ref]
+        insd_r      = []
+        insd_t      = []
+        u_ref_lower = [ref.lower() for ref in self.u_ref]
         for i in matched_indices:
             key = keys[i]
             for j, ref in enumerate(u_ref_lower):
@@ -4247,7 +4192,7 @@ class pbx_probe():
     # Function: Citation History Network
     def network_hist(self, view = 'browser', min_links = 0, chain = [], path = True, node_size = 20, node_labels = True, dist = 1.2):
         
-        ############################################################################
+        #----------------------------------------------------------------------
                      
         def filter_matrix_by_citations(matrix_r, min_links):
             filtered_matrix = matrix_r.copy()
@@ -4269,7 +4214,7 @@ class pbx_probe():
             filtered_matrix = filtered_matrix.loc[hold_list, :]
             return filtered_matrix, dropped_indices, node_min
 
-        ############################################################################
+         #----------------------------------------------------------------------
         
         if (view == 'browser'):
             pio.renderers.default = 'browser'
@@ -4742,12 +4687,12 @@ class pbx_probe():
     # Function: W2V
     def word_embeddings(self, stop_words = ['en'], lowercase = True, rmv_accents = True, rmv_special_chars = False, rmv_numbers = True, rmv_custom_words = [], vector_size = 100, window = 5, min_count = 1, epochs = 10):
         
-        ##############################################################################
+        #----------------------------------------------------------------------
         
         def tokenize(text):
             return re.findall(r'\b\w+\b', text)
         
-        ##############################################################################
+        #----------------------------------------------------------------------
         
         corpus = self.data['abstract'].tolist()
         corpus = self.clear_text(corpus, 
