@@ -6,7 +6,7 @@
 # pyBibX - A Bibliometric and Scientometric Library Powered with Artificial Intelligence Tools
 
 # Citation:
-# PEREIRA, V., BASILIO, M.P. and SANTOS, C.H.T. (2025). PyBibX: A Python Library for Bibliometric and
+# PEREIRA, V.; BASILIO, M.P.; SANTOS, C.H.T. (2025). PyBibX: A Python Library for Bibliometric and
 # Scientometric Analysis Powered with Artificial Intelligence Tools. Data Technologies and Applications.
 # Vol. ahead-of-print No. ahead-of-print. doi: https://doi.org/10.1108/DTA-08-2023-0461
 
