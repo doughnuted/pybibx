@@ -43,6 +43,8 @@ plt.style.use('bmh')
 from numba import njit
 from numba.typed import List
 #from rapidfuzz import fuzz
+from scipy.ndimage import gaussian_filter1d
+from scipy.signal import find_peaks
 from scipy.sparse import coo_matrix
 from scipy.sparse import csr_matrix
 from sentence_transformers import SentenceTransformer                    
@@ -517,6 +519,9 @@ class pbx_probe():
         self.corr_a_inst_map    = -1
         self.frst_a_inst_map    = -1  
         self.top_y_x            = -1
+        self.top_refs           = -1
+        self.rpys_pk            = -1
+        self.rpys_rs            = -1
         self.data['year']       = self.data['year'].replace('UNKNOWN', '0')
         self.dy                 = pd.to_numeric(self.data['year'], downcast = 'float')
         self.date_str           = int(self.dy.min())
@@ -579,10 +584,17 @@ class pbx_probe():
         self.doc_aut            = self.__get_counts(self.u_aut, self.aut)
         self.av_doc_aut         = round(sum(self.doc_aut)/len(self.doc_aut), 2)
         self.t_c, self.s_c      = self.__total_and_self_citations()
+        self.r_c                = [self.s_c[i]/max(self.t_c[i], 1) for i in range(0, len(self.t_c))]
         self.natsort            = lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', s)]  
         self.dy_c_year          = self.__get_collaboration_year()
         self.u_ref              = [ref for ref in self.u_ref if ref.lower() != 'unknown']
         self.dy_ref             = self.__get_ref_year()
+        self.u_ref_id           = self.__get_ref_id()
+        ref_map                 = dict(zip(self.u_ref, self.u_ref_id))
+        self.ref_id             = []
+        for ref_list in self.ref:
+            r_id = [ref_map.get(ref, ref) for ref in ref_list]
+            self.ref_id.append(r_id)
         self.__id_document()
         self.__id_author()
         self.__id_source()
@@ -844,7 +856,7 @@ class pbx_probe():
             for i in range(0, self.data.shape[0]):
                 target = self.data.loc[i, 'author'].lower()
                 if (name.lower() in target):
-                    self.data.loc[i, 'author'] = target.replace(name, replace_for)
+                    self.data.loc[i, 'author'] = target.replace(name.lower(), replace_for)
         self.__make_bib(verbose = False)
         return
     
@@ -870,7 +882,7 @@ class pbx_probe():
                 elif (self.data.loc[i, 'source'].lower() == 'wos'):
                     target = self.data.loc[i, 'affiliation_'].lower()
                 if (name.lower() in target):
-                    self.data.loc[i, 'affiliation'] = target.replace(name, replace_for)
+                    self.data.loc[i, 'affiliation'] = target.replace(name.lower(), replace_for)
         self.__make_bib(verbose = False)
         return
     
@@ -880,7 +892,7 @@ class pbx_probe():
             for i in range(0, self.data.shape[0]):
                 target = self.data.loc[i, 'language'].lower()
                 if (name.lower() in target):
-                    self.data.loc[i, 'language'] = target.replace(name, replace_for)
+                    self.data.loc[i, 'language'] = target.replace(name.lower(), replace_for)
         self.__make_bib(verbose = False)
         return
     
@@ -890,10 +902,20 @@ class pbx_probe():
             for i in range(0, self.data.shape[0]):
                 target = self.data.loc[i, 'abbrev_source_title'].lower()
                 if (name.lower() in target):
-                    self.data.loc[i, 'abbrev_source_title'] = target.replace(name, replace_for)
+                    self.data.loc[i, 'abbrev_source_title'] = target.replace(name.lower(), replace_for)
         self.__make_bib(verbose = False)
         return
 
+    # Function: Merge Reference
+    def merge_reference(self, get = [], replace_for = 'name'):
+        for name in get:
+            for i in range(0, self.data.shape[0]):
+                target = self.data.loc[i, 'references'].lower()
+                if (name.lower() in target):
+                    self.data.loc[i, 'references'] = target.replace(name.lower(), replace_for)
+        self.__make_bib(verbose = False)
+        return
+    
     # Function: Transform Hex to RGBa
     def __hex_rgba(self, hxc = '#ba6200', alpha = 0.15):
         if (hxc.find('#') == 0):
@@ -1712,6 +1734,39 @@ class pbx_probe():
             valid_years = [int(year) for year in matches if 1665 <= int(year) <= date_end] # The oldest scientific journal is Philosophical Transactions, which was launched in 1665 by Henry Oldenburg
             extracted_years.append(max(valid_years) if valid_years else -1)
         return extracted_years
+
+    # Function: Get Reference ID
+    def __get_ref_id(self):
+        labels_r       = ['r_' + str(i) for i in range(0, len(self.u_ref))]
+        sources        = self.data['source'].str.lower()
+        keys_1         = self.data['title'].str.lower().str.replace('[', '', regex = False).str.replace(']', '', regex = False).tolist()
+        keys_2         = self.data['doi'].str.lower().tolist()
+        keys           = np.where(sources.isin(['scopus', 'pubmed']), keys_1, np.where(sources == 'wos', keys_2, None))
+        corpus          = ' '.join(ref.lower() for ref in self.u_ref)
+        matched_indices = []
+        for i, key in enumerate(keys):
+            if (key and key.strip()):
+                try:
+                    compiled_regex = re.compile(key)
+                    if (re.search(compiled_regex, corpus)):
+                        matched_indices.append(i)
+                except:
+                    pass
+        insd_r      = []
+        insd_t      = []
+        u_ref_lower = [ref.lower() for ref in self.u_ref]
+        for i in matched_indices:
+            key = keys[i]
+            for j, ref in enumerate(u_ref_lower):
+                if (re.search(key, ref)):
+                    insd_r.append(f'r_{j}')
+                    insd_t.append(str(i))
+                    self.dy_ref[j] = int(self.dy[i])
+                    break
+        dict_lbs = dict(zip(insd_r, insd_t))
+        dict_lbs.update({label: label for label in labels_r if label not in dict_lbs})
+        labels_r = [dict_lbs.get(label, label) for label in labels_r]
+        return labels_r
     
     ##############################################################################
     
@@ -3023,6 +3078,204 @@ class pbx_probe():
 
     #############################################################################
     
+    # Function: References Citations 
+    def ref_citation_matrix(self, tgt_ref_id = [], date_start = None, date_end = None):
+        citation_records = []
+        for article_idx, pub_year in enumerate(self.dy):
+            year = int(pub_year) 
+            if (date_start is not None and year < date_start) or (date_end is not None and year > date_end):
+                continue
+            ref_names = self.ref[article_idx]
+            ref_ids   = self.ref_id[article_idx]
+            for ref_name, ref_id in zip(ref_names, ref_ids):
+                if (ref_name.lower() == 'unknown'):
+                    continue
+                if tgt_ref_id and ref_id not in tgt_ref_id:
+                    continue
+                citation_records.append({'Reference': ref_name, 'Reference ID': ref_id, 'Citing Articles': (article_idx, year)})
+        df                          = pd.DataFrame(citation_records)
+        result_df                   = df.groupby('Reference').agg({'Reference ID': lambda x: x.iloc[0], 'Citing Articles': lambda x: list(set(x))}).reset_index()
+        ref_year_dict = dict(zip(self.u_ref, self.dy_ref))
+        result_df['Reference Year'] = result_df['Reference'].map(ref_year_dict)
+        return result_df[['Reference', 'Reference ID', 'Reference Year', 'Citing Articles']]
+ 
+    # Function: Top References
+    def plot_top_refs(self, view = 'browser', topn = 10, font_size = 8, use_ref_id = False, date_start = None, date_end = None):
+        if (view == 'browser'):
+            pio.renderers.default = 'browser'
+        all_refs_names = [r for refs in self.ref    for r in refs if r != 'UNKNOWN']
+        all_refs_ids   = [r for refs in self.ref_id for r in refs if r != 'UNKNOWN']
+        ref_year_names = {ref: year for ref, year in zip(self.u_ref,    self.dy_ref)}
+        ref_year_ids   = {ref: year for ref, year in zip(self.u_ref_id, self.dy_ref)}
+        if (use_ref_id == False):
+            ref_year_dict = ref_year_names
+            all_refs      = all_refs_names
+        else:
+            ref_year_dict = ref_year_ids
+            all_refs      = all_refs_ids
+        if (date_start is not None or date_end is not None):
+            filtered_all_refs       = []
+            filtered_all_refs_names = []
+            filtered_all_refs_ids   = []
+            for i in range(0, len(all_refs)):
+                year = ref_year_dict.get(all_refs_ids[i], -1)
+                if (year == -1):
+                    continue
+                if (date_start is not None and year < date_start):
+                    continue
+                if (date_end is not None and year > date_end):
+                    continue
+                filtered_all_refs.append(all_refs[i])
+                filtered_all_refs_names.append(all_refs_names[i])
+                filtered_all_refs_ids.append(all_refs_ids[i])
+        else:
+            filtered_all_refs       = all_refs
+            filtered_all_refs_names = all_refs_names
+            filtered_all_refs_ids   = all_refs_ids
+        ref_counter       = Counter(filtered_all_refs)
+        top_refs          = ref_counter.most_common(topn)
+        ref_counter_names = Counter(filtered_all_refs_names)
+        top_refs_names    = ref_counter_names.most_common(topn)
+        ref_counter_ids   = Counter(filtered_all_refs_ids)
+        top_refs_ids      = ref_counter_ids.most_common(topn)
+        if (top_refs):
+            labels, values = zip(*top_refs)
+            labels_n, _    = zip(*top_refs_names)
+            labels_i, _    = zip(*top_refs_ids)
+        else:
+            labels, values = [], []
+            labels_n       = []
+            labels_i       = []
+        years_top_refs = [ref_year_dict.get(ref, -1) for ref in labels]
+        self.top_refs  = pd.DataFrame({'Reference': labels_n, 'Reference ID': labels_i, 'Reference Year': years_top_refs, 'Raw Citation Counts': values})
+        fig            = go.Figure(data = [go.Pie(
+                                                    labels       = labels,
+                                                    values       = values,
+                                                    textinfo     = 'value',        
+                                                    textposition = 'inside',
+                                                    hoverinfo    = 'label+value+percent',
+                                                    marker       = dict(colors = self.color_names, line = dict(color = 'black', width = 1) )
+                                                )])
+        fig.update_traces(domain = {'x': [0, 1], 'y': [0.3, 1]})
+        fig.update_layout(
+                            title_text = 'Top Cited References',
+                            legend     = dict(
+                                                orientation = 'h',      
+                                                yanchor     = 'top',
+                                                y           = 0.28,              
+                                                xanchor     = 'center',
+                                                x           = 0.5,
+                                                font        = dict(size = font_size)), 
+                                                margin      = dict(l = 50, r = 50, t = 50, b = 50)
+                                               )
+        fig.show()
+        return
+    
+    # Function: Citation Trajectory
+    def plot_citation_trajectory(self, view = 'browser', ref_names = [], ref_ids = []):
+        if( view == 'browser'):
+            pio.renderers.default = 'browser'
+        if (ref_names):
+            selected_refs = ref_names
+            use_names     = True
+        elif (ref_ids):
+            selected_refs = ref_ids
+            use_names     = False   
+        valid_years         = [int(year) for year in self.dy if year != -1]
+        min_year, max_year  = min(valid_years), max(valid_years)
+        x_range             = list(range(min_year, max_year + 1))
+        citation_trajectory = {ref: {year: 0 for year in x_range} for ref in selected_refs}
+        for i, pub_year in enumerate(self.dy):
+            if (pub_year == -1):
+                continue
+            article_refs = self.ref[i] if use_names else self.ref_id[i]
+            c            = 0
+            for r in article_refs:
+                c = c + 1
+                if (r in selected_refs):
+                    if (pub_year in citation_trajectory[r]):
+                        citation_trajectory[r][pub_year] =  citation_trajectory[r][pub_year] + 1
+        fig = go.Figure()
+        for idx, ref in enumerate(selected_refs):
+            x_values = [year for year in x_range if citation_trajectory[ref][year] != 0]
+            y_values = [citation_trajectory[ref][year] for year in x_range if citation_trajectory[ref][year] != 0]
+            c        = self.color_names[idx % len(self.color_names)]
+            fig.add_trace(go.Scatter(
+                                        x             = x_values,
+                                        y             = y_values,
+                                        mode          = 'lines+markers',
+                                        name          = ref,
+                                        line          = dict(color = c, width = 2.5, shape  = 'spline'),
+                                        marker        = dict(color = c, size = 8,    symbol = 'circle'),
+                                        text          = [f'Citations: {count}' for count in y_values],
+                                        textposition  = 'top center',
+                                        hoverinfo     = 'x+y+name+text',
+                                        hovertemplate='<b>Year: %{x}<br>Citations: %{y}<extra></extra>'
+                                    ))
+        fig.update_layout(
+                            title  = dict( text = 'Citation Trajectory Analysis', font = dict(color = '#2a2a2a'), x = 0.5, xanchor = 'center'),
+                            xaxis  = dict( title = 'Publication Year', showgrid = True, gridcolor = 'white', tickmode = 'linear', dtick = 2),
+                            yaxis  = dict(title = 'Citation Count', rangemode = 'tozero', gridcolor = 'white'),
+                            legend = dict(title = dict(text = 'References'), orientation = 'v', yanchor = 'top', y = 1, xanchor = 'left', x = 1.02, bgcolor = 'rgba(255,255,255,0.5)'),
+                            margin = dict(l = 50, r = 50, t = 50, b = 50)
+                          )
+        fig.show()
+        return
+    
+    # Function: RPYS (Reference Publication Year Spectroscopy) with Gaussian Filter to Find Peaks
+    def plot_rpys(self, view = 'browser', peaks_only = False):
+        publication_years = [item for item in self.dy_ref if item != -1]
+        year_counts       = Counter(publication_years)
+        years             = sorted(year_counts.keys())
+        counts            = np.array([year_counts[year] for year in years])
+        smoothed_counts   = gaussian_filter1d(counts, sigma = 1)
+        peaks, properties = find_peaks(smoothed_counts, height = 1)
+        peak_years        = np.array(years)[peaks]
+        peak_values       = smoothed_counts[peaks]
+        self.rpys_pk      = pd.DataFrame({'Peak Years': peak_years, 'Counts': peak_values})
+        self.rpys_rs      = pd.DataFrame({'Years': years, 'Raw Citation Counts': counts, 'Smoothed Citation Counts': smoothed_counts})
+        bar_colors        = ['rgba(240, 100, 100, 0.5)' if year in peak_years else 'rgba(100, 150, 240, 0.5)' for year in years]
+        if (peaks_only == True):
+            for i in range(len(bar_colors)-1, -1, -1):
+                if (bar_colors[i] != 'rgba(240, 100, 100, 0.5)' ):
+                    del years[i]
+                    del bar_colors[i]
+                    counts          = np.delete(counts, i)  
+                    smoothed_counts = np.delete(smoothed_counts, i) 
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+                                    x            = years,
+                                    y            = counts,
+                                    name         = 'Raw Citation Counts',
+                                    marker_color = bar_colors
+                            ))
+        fig.add_trace(go.Scatter(
+                                    x            = years,
+                                    y            = smoothed_counts,
+                                    mode         = 'lines+markers',
+                                    name         = 'Smoothed Citation Counts',
+                                    line         = dict(color = 'black', width = 1)
+                            ))
+        fig.add_trace(go.Scatter(
+                                    x            = peak_years,
+                                    y            = peak_values,
+                                    mode         = 'markers',
+                                    marker       = dict(color = 'red', size = 10, symbol = 'circle'),
+                                    name         = 'Peaks'
+                            ))
+        fig.update_layout(
+                                    title        = 'Reference Publication Year Spectroscopy (RPYS)',
+                                    xaxis_title  = 'Publication Year',
+                                    yaxis_title  = 'Citation Counts',
+                                    showlegend   = True,
+                                    xaxis        = dict(rangeselector = dict( buttons = list([ dict(count = 1, label = '1y', step = 'year', stepmode = 'backward'), dict(step = 'all') ])), 
+                                                        rangeslider  = dict(visible = True), type = 'date')
+                            )
+        fig.show()
+        return
+    
+    #############################################################################
+        
     # Function: Authors Colaboration Adjacency Matrix   
     def __adjacency_matrix_aut(self, min_colab = 1):
         tgt_entry      = self.aut
@@ -4743,7 +4996,6 @@ class pbx_probe():
         all_words   = []
         all_vectors = []
         all_labels  = []
-    
         for i, (pos, neg) in enumerate(zip(positive, negative)):
             query_label = '+'.join(pos) + ('-' + '-'.join(neg) if neg else '')
             try:
@@ -4757,14 +5009,12 @@ class pbx_probe():
                     all_labels.append(query_label)
             except KeyError as e:
                 print(f"Warning: One or more words not in the model's vocabulary: {e}")
-    
         reducer         = UMAP(n_components = 2, random_state = 42)
         reduced_vectors = reducer.fit_transform(all_vectors)
         df              = pd.DataFrame(reduced_vectors, columns = ['x', 'y'])
         df['word']      = all_words
         df['label']     = all_labels  
         fig             = go.Figure()
-    
         for i, query_label in enumerate(set(all_labels)):
             group_df = df[df['label'] == query_label]
             fig.add_trace(go.Scatter(
