@@ -3224,6 +3224,8 @@ class pbx_probe():
     
     # Function: RPYS (Reference Publication Year Spectroscopy) with Gaussian Filter to Find Peaks
     def plot_rpys(self, view = 'browser', peaks_only = False):
+        if( view == 'browser'):
+            pio.renderers.default = 'browser'
         publication_years = [item for item in self.dy_ref if item != -1]
         year_counts       = Counter(publication_years)
         years             = sorted(year_counts.keys())
