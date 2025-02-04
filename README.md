@@ -10,7 +10,7 @@ A Bibliometric and Scientometric python library that uses the raw files generate
 
 To export the correct file formats from Scopus, Web of Science, and PubMed, follow these steps:
 
-- a) **Scopus**: Search, select articles, click "Export" choose "BibTeX" or "CSV", select all fields, click "Export" again. When using the "CSV" format, the exported files will include the references for the articles
+- a) **Scopus**: Search, select articles, click "Export" choose "BibTeX" or "CSV", select all fields, click "Export" again. When using the "CSV" format, the exported files will include the References for the articles
 - b) **WoS**: Search, select articles, click "Export" choose "Save to Other File Formats" select "BibTeX" select all fields, click "Send"
 - c) **PubMed**: Search, select articles, click "Save" choose "PubMed" format, click "Save" to download a .txt file 
 
@@ -67,7 +67,7 @@ Artificial Intelligence Capabilities:
 
 Correction and Manipulation Capabilities:
 - a) Filter the .bib, .csv or .txt file by Year, Sources, Bradford Law Cores, Countries, Languages and/or Abstracts (Documents with Abstracts)
-- b) Merge Authors, Institutions, Countries, Languages and/or Sources that have multiple entries 
+- b) Merge Authors, Institutions, Countries, Languages, Sources and/or References that have multiple entries 
 - c) Merge different or the same database files one at a time. The preference for information preservation is given to the old database, so the order of merging matters (consult **Examples 04 and 05**)
 
 ## Usage
