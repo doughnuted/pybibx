@@ -2,7 +2,7 @@
 
 ## Citation
 
-PEREIRA, V., BASILIO, M.P. and SANTOS, C.H.T. (2025). **PyBibX: A Python Library for Bibliometric and Scientometric Analysis Powered with Artificial Intelligence Tools**. Data Technologies and Applications. Vol. ahead-of-print No. ahead-of-print. doi: https://doi.org/10.1108/DTA-08-2023-0461
+PEREIRA, V.; BASILIO, M.P.; SANTOS, C.H.T. (2025). **PyBibX: A Python Library for Bibliometric and Scientometric Analysis Powered with Artificial Intelligence Tools**. Data Technologies and Applications. Vol. ahead-of-print No. ahead-of-print. doi: https://doi.org/10.1108/DTA-08-2023-0461
 
 ## Introduction
 
@@ -10,9 +10,9 @@ A Bibliometric and Scientometric python library that uses the raw files generate
 
 To export the correct file formats from Scopus, Web of Science, and PubMed, follow these steps:
 
-- a) **Scopus**: Search, select articles, click "Export" choose "BibTeX" or "CSV", select all fields, click "Export" again.
+- a) **Scopus**: Search, select articles, click "Export" choose "BibTeX" or "CSV", select all fields, click "Export" again. When using the "CSV" format, the exported files will include the references for the articles
 - b) **WoS**: Search, select articles, click "Export" choose "Save to Other File Formats" select "BibTeX" select all fields, click "Send"
-- c) **PubMed**: Search, select articles, click "Save" choose "PubMed" format, click "Save" to download a .txt file. 
+- c) **PubMed**: Search, select articles, click "Save" choose "PubMed" format, click "Save" to download a .txt file 
 
 General Capabilities:
 - a) Works with **Scopus** (.bib files or .csv files), **WOS** (.bib files) and **PubMed** (.txt files) databases 
@@ -27,11 +27,15 @@ General Capabilities:
 - j) Creates an **Evolution Plot (interactive plot)** based on Abstracts, Titles, Sources, Authors Keywords or Keywords Plus
 - k) Creates an **Evolution Plot Complement (interactive plot)** based on Abstracts, Titles, Sources, Authors Keywords or Keywords Plus
 - l) Creates a **Sankey Diagram (interactive plot)** with any combination of the following keys: Authors, Countries, Institutions, Journals, Auhors_Keywords, Keywords_Plus, and/or Languages
-- m) Creates a **X Y Bar Chart** (interactive plot) that displays the count of a specified Y-key for each category defined by a specified X-key. The plot visualizes the distribution of entities such as Authors, Countries, Institutions, Journals, Authors_Keywords, Keywords_Plus, and/or Languages. For example, it can show how many Authors are associated with each Country. 
+- m) Creates a **X Y Bar Chart (interactive plot)** that displays the count of a specified Y-key for each category defined by a specified X-key. The plot visualizes the distribution of entities such as Authors, Countries, Institutions, Journals, Authors_Keywords, Keywords_Plus, and/or Languages. For example, it can show how many Authors publications are associated with each Country
 - n) Creates a **TreeMap** from the Authors, Countries, Institutions, Journals, Auhors_Keywords, or Keywords_Plus
 - o) Creates an **Authors Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each author
 - p) Creates a **Countries Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each country (each author's country)
-- q) Creates a **Bar Plot**  for the following statistics: Documents per Year, Citations per Year, Past Citations per Year, Lotka's Law, Sources per Documents, Sources per Citations, Authors per Documents, Authors per Citations, Authors per H-Index, Bradford's Law (Core Sources 1, 2 or 3), Institutions per Documents, Institutions per Citations, Countries per Documents, Countries per Citations, Language per Documents, Keywords Plus per Documents and Authors' Keywords per Documents
+- q) Creates a **Bar Plot (interactive plot)**  for the following statistics: Documents per Year, Citations per Year, Past Citations per Year, Lotka's Law, Sources per Documents, Sources per Citations, Authors per Documents, Authors per Citations, Authors per H-Index, Bradford's Law (Core Sources 1, 2 or 3), Institutions per Documents, Institutions per Citations, Countries per Documents, Countries per Citations, Language per Documents, Keywords Plus per Documents and Authors' Keywords per Documents
+- r) Creates a **Top Reference Plot (interactive plot)** to visualize the top cited References
+- s) Creates a **Citation Trajectory Plot (interactive plot)**  that shows the yearly citation counts for each selected Reference
+- t) Creates a **Citation Matrix** that shows for each Reference, which citing articles (with their publication years) mentioned that Reference, the Unique Reference ID, and the Reference's publication year
+- u) Creates a **RPYS Reference Publication Year Spectroscopy (interactive plot)** to visualize citation patterns over the years, revealing the peaks in reference publication years, trough Gaussian Filters, that might indicate influential works or shifts in research trends
 
 Network Capabilities:
 - a) **Collaboration Plot** between Authors, Countries, Institutions, Authors' Keywords or Keywords Plus
@@ -50,7 +54,7 @@ Artificial Intelligence Capabilities:
 - g) Find the most representative topics according to a word
 - h) Creates **W2V Embeddings** from Abstracts
 - i) Find Documents based in words
-- j) Calculates the cosine similarity between two words.
+- j) Calculates the cosine similarity between two words
 - k) Make operations between **W2V Embeddings**
 - l) Visualize **W2V Embeddings** operations
 - m) Creates **Sentence Embeddings** from Abstracts, Titles, Authors Keywords or Keywords Plus
