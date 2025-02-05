@@ -12,7 +12,7 @@ To export the correct file formats from Scopus, Web of Science, and PubMed, foll
 
 - a) **Scopus**: Search, select articles, click "Export" choose "BibTeX" or "CSV", select all fields, click "Export" again. When using the "CSV" format, the exported files will include the References for the articles
 - b) **WoS**: Search, select articles, click "Export" choose "Save to Other File Formats" select "BibTeX" select all fields, click "Send"
-- c) **PubMed**: Search, select articles, click "Save" choose "PubMed" format, click "Save" to download a .txt file 
+- c) **PubMed**: Search, select articles, click "Save" choose "PubMed" format, click "Save" to download a .txt file. The exported files do not contain the References for the articles 
 
 General Capabilities:
 - a) Works with **Scopus** (.bib files or .csv files), **WOS** (.bib files) and **PubMed** (.txt files) databases 
@@ -20,29 +20,31 @@ General Capabilities:
 - c) Identification of documents per type
 - d) Generates a Health Report to evaluate the quality of the .bib/.csv file
 - e) Generates an **EDA (Exploratory Data Analysis)** Report: Publications Timespan, Total Number of Countries, Total Number of Institutions, Total Number of Sources, Total Number of References, Total Number of Languages (and also the number of docs for each language), Total Number of Documents, Average Documents per Author, Average Documents per Institution, Average Documents per Source, Average Documents per Year, Total Number of Authors, Total Number of Authors Keywords, Total Number of Authors Keywords Plus, Total Single-Authored Documents, Total Multi-Authored Documents, Average Collaboration Index, Max H-Index, Total Number of Citations, Average Citations per Author, Average Citations per Institution, Average Citations per Document, Average Citations per Source
-- f) Creates an **ID (Identification)** for each Document, Authors, Sources, Institutions, Countries, Authors' Keywords, Keywords Plus. The IDs can be used in graphs/plots to obtain a cleaner visualization
+- f) Creates an **ID (Identification)** for each Document, Authors, Sources, Institutions, Countries, Authors' Keywords, Keywords Plus and References. The IDs can be used in graphs/plots to obtain a cleaner visualization
 - g) Creates a **WordCloud** from the Abstracts, Titles, Authors Keywords or Keywords Plus
 - h) Creates a **N-Gram Bar Plot (interactive plot)** from the Abstracts, Titles, Authors Keywords or Keywords Plus
 - i) Creates a **Projection (interactive plot)** of the documents based on the Abstracts, Titles, Authors Keywords or Keywords Plus
 - j) Creates an **Evolution Plot (interactive plot)** based on Abstracts, Titles, Sources, Authors Keywords or Keywords Plus
 - k) Creates an **Evolution Plot Complement (interactive plot)** based on Abstracts, Titles, Sources, Authors Keywords or Keywords Plus
 - l) Creates a **Sankey Diagram (interactive plot)** with any combination of the following keys: Authors, Countries, Institutions, Journals, Auhors_Keywords, Keywords_Plus, and/or Languages
-- m) Creates a **X Y Bar Chart (interactive plot)** that displays the count of a specified Y-key for each category defined by a specified X-key. The plot visualizes the distribution of entities such as Authors, Countries, Institutions, Journals, Authors_Keywords, Keywords_Plus, and/or Languages. For example, it can show how many Authors publications are associated with each Country
-- n) Creates a **TreeMap** from the Authors, Countries, Institutions, Journals, Auhors_Keywords, or Keywords_Plus
+- m) Creates a **XY Bar Chart (interactive plot)** that displays the count of a specified Y-key for each category defined by a specified X-key. The plot visualizes the distribution of entities such as Authors, Countries, Institutions, Journals, Authors_Keywords, Keywords_Plus, and/or Languages. For example, it can show how many Authors publications are associated with each Country
+- n) Creates a **TreeMap (interactive plot)** from the Authors, Countries, Institutions, Journals, Auhors_Keywords, or Keywords_Plus
 - o) Creates an **Authors Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each author
 - p) Creates a **Countries Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each country (each author's country)
 - q) Creates a **Bar Plot (interactive plot)**  for the following statistics: Documents per Year, Citations per Year, Past Citations per Year, Lotka's Law, Sources per Documents, Sources per Citations, Authors per Documents, Authors per Citations, Authors per H-Index, Bradford's Law (Core Sources 1, 2 or 3), Institutions per Documents, Institutions per Citations, Countries per Documents, Countries per Citations, Language per Documents, Keywords Plus per Documents and Authors' Keywords per Documents
 - r) Creates a **Top Reference Plot (interactive plot)** to visualize the top cited References
 - s) Creates a **Citation Trajectory Plot (interactive plot)**  that shows the yearly citation counts for each selected Reference
 - t) Creates a **Citation Matrix** that shows for each Reference, which citing articles (with their publication years) mentioned that Reference, the Unique Reference ID, and the Reference's publication year
-- u) Creates a **RPYS Reference Publication Year Spectroscopy (interactive plot)** to visualize citation patterns over the years, revealing the peaks in reference publication years, trough Gaussian Filters, that might indicate influential works or shifts in research trends
+- u) Creates a **RPYS-Reference Publication Year Spectroscopy (interactive plot)** to visualize citation patterns over the years. Revealing the peaks in reference publication years (trough Gaussian Filters) that might indicate influential works or shifts in research trends
 
 Network Capabilities:
-- a) **Collaboration Plot** between Authors, Countries, Institutions, Authors' Keywords or Keywords Plus
-- b) **Citation Analysis (interactive plot)** between Documents (Blue Nodes) and Citations (Red Nodes). Documents and Citations can be highlighted for better visualization
-- c) **Collaboration Analysis (interactive plot)** between Authors, Countries, Institutions or **Adjacency Analysis (interactive plot)** between Authors' Keywords or Keywords Plus. Collaboration and Adjacency can be highlighted for better visualization
-- d) **Similarity Analysis (interactive plot)** can be performed using coupling or cocitation methods
-- e) **World Map Collaboration Analysis (interactive plot)** between Countries in a Map
+- a) Creates a **Top Reference Set Matrix**, which, for a given group size n, identifies and returns the most frequently co-cited Reference groups of size n
+- b) Creates a **Reference Co-Citation Network (interactive plot)** that visually displays the top n References that are most frequently cited together with a target Reference
+- c) **Collaboration Plot** between Authors, Countries, Institutions, Authors' Keywords or Keywords Plus
+- d) **Citation Analysis (interactive plot)** between Documents (Blue Nodes) and Citations (Red Nodes). Documents and Citations can be highlighted for better visualization
+- e) **Collaboration Analysis (interactive plot)** between Authors, Countries, Institutions or **Adjacency Analysis (interactive plot)** between Authors' Keywords or Keywords Plus. Collaboration and Adjacency can be highlighted for better visualization
+- f) **Similarity Analysis (interactive plot)** can be performed using coupling or cocitation methods
+- g) **World Map Collaboration Analysis (interactive plot)** between Countries in a Map
 
 Artificial Intelligence Capabilities:
 - a) **Topic Modelling** using BERTopic to cluster documents by topic
