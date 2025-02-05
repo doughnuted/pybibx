@@ -522,6 +522,7 @@ class pbx_probe():
         self.top_refs           = -1
         self.rpys_pk            = -1
         self.rpys_rs            = -1
+        self.top_co_c           = -1
         self.data['year']       = self.data['year'].replace('UNKNOWN', '0')
         self.dy                 = pd.to_numeric(self.data['year'], downcast = 'float')
         self.date_str           = int(self.dy.min())
@@ -3275,6 +3276,106 @@ class pbx_probe():
                             )
         fig.show()
         return
+
+    # Function: Top Cited Co-References
+    def top_cited_co_references(self, group = 2, topn = 10):
+        co_cited_groups = []
+        for refs in self.ref_id:
+            for combo in combinations(refs, group):
+                co_cited_groups.append(tuple(sorted(combo)))
+        group_counts = Counter(co_cited_groups)
+        top_groups   = group_counts.most_common(topn)
+        df           = pd.DataFrame(top_groups, columns = ['Reference ID Sets', 'Count'])
+        return df
+
+    # Function: Plot Co-Citation
+    def plot_co_citation_network(self, view = 'browser', target_ref_id = '', topn = 10):
+        if( view == 'browser'):
+            pio.renderers.default = 'browser'
+        citing_articles    = [idx for idx, refs in enumerate(self.ref_id) if target_ref_id in refs]
+        co_cited_refs      = []
+        for article_idx in citing_articles:
+            co_cited_refs.extend(self.ref_id[article_idx])
+        co_cited_refs      = [ref for ref in co_cited_refs if ref != target_ref_id]
+        co_cited_counts    = Counter(co_cited_refs)
+        top_co_cited       = co_cited_counts.most_common(topn)
+        ref_details        = []
+        edges              = []
+        counts             = [count for _, count in top_co_cited]
+        max_count          = max(counts) if counts else 1
+        min_size, max_size = 10, 20
+        for ref_id, count in top_co_cited:
+            if (ref_id in self.u_ref_id):
+                idx      = self.u_ref_id.index(ref_id)
+                ref_name = self.u_ref[idx]
+                ref_year = self.dy_ref[idx]
+                ref_details.append((ref_id, ref_name, ref_year, count))
+                edges.append((target_ref_id, ref_id, count))
+        self.top_co_c = pd.DataFrame(ref_details, columns = ['Reference ID', 'Reference', 'Year', 'Count'])
+        G             = nx.Graph()
+        G.add_node(target_ref_id, 
+                   label     = target_ref_id, 
+                   size      = 40, 
+                   color     = '#FF6B6B', 
+                   hovertext = f"Target: {target_ref_id}") 
+        for ref_id, ref_name, ref_year, count in ref_details:
+            title         = f"{ref_name} ({ref_year})"
+            wrapped_title = '<br>'.join(textwrap.wrap(title, width=75))
+            hover_text    = f"{wrapped_title}<br>Co-Citations: {count}"
+            norm_size     = (count / max_count) * (max_size - min_size) + min_size
+            G.add_node(ref_id, 
+                       label     = ref_id, 
+                       size      = norm_size, 
+                       color     = '#657beb', 
+                       hovertext = hover_text)
+        for source, target, weight in edges:
+            G.add_edge(source, target, weight = weight)
+        pos = nx.spring_layout(G, seed = 42, k = 0.6, iterations = 100)
+        edge_x, edge_y, edge_weights = [], [], []
+        for edge in G.edges(data=True):
+            x0, y0 = pos[edge[0]]
+            x1, y1 = pos[edge[1]]
+            edge_x.extend([x0, x1, None])
+            edge_y.extend([y0, y1, None])
+            edge_weights.append(edge[2]['weight'])
+        edge_trace = go.Scatter(
+                                x         = edge_x, 
+                                y         = edge_y,
+                                line      = dict(width = 0.15, color = 'black'),
+                                hoverinfo = 'none',
+                                mode      = 'lines'
+                            )
+        node_x, node_y, node_text, node_size, node_color, node_hovertext = [], [], [], [], [], []
+        for node in G.nodes():
+            x, y = pos[node]
+            node_x.append(x)
+            node_y.append(y)
+            node_text.append(G.nodes[node]['label'])
+            node_size.append(G.nodes[node]['size'])
+            node_color.append(G.nodes[node]['color'])
+            node_hovertext.append(G.nodes[node]['hovertext'])
+        node_trace = go.Scatter(
+                                x            = node_x, 
+                                y            = node_y,
+                                mode         = 'markers+text',
+                                text         = node_text,
+                                marker       = dict(size = node_size, color = node_color, line = dict(width = 1.5, color = 'black')),
+                                textposition = 'top center',
+                                hoverinfo    = 'text',
+                                hovertext    = node_hovertext,
+                                textfont     = dict(size = 10, color = '#2D3436')
+                                )
+        fig = go.Figure(data = [edge_trace, node_trace])
+        fig.update_layout(
+                            showlegend   = False,
+                            hovermode    = 'closest',
+                            margin       = dict(b = 0, l = 0, r = 0, t = 40),
+                            plot_bgcolor = 'rgb(255, 255, 256)',
+                            xaxis        = dict(showgrid = False, zeroline = False, showticklabels = False, scaleanchor = 'y'),
+                            yaxis        = dict(showgrid = False, zeroline = False, showticklabels = False, scaleanchor = 'x')
+                        )
+        fig.show()
+        return 
     
     #############################################################################
         
