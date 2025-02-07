@@ -505,6 +505,9 @@ class pbx_probe():
     # Function: Prepare .bib File
     def __make_bib(self, verbose = True):
         self.ask_gpt_ap         = -1
+        self.ask_gpt_cp         = -1
+        self.ask_gpt_ip         = -1
+        self.ask_gpt_sp         = -1
         self.ask_gpt_bp         = -1
         self.ask_gpt_ct         = -1
         self.ask_gpt_ep         = -1
@@ -534,7 +537,8 @@ class pbx_probe():
         self.av_c_doc           = round(sum(self.citation)/self.data.shape[0], 2)
         self.ref, self.u_ref    = self.__get_str(entry = 'references', s = ';',     lower = False, sorting = True)
         self.aut, self.u_aut    = self.__get_str(entry = 'author',     s = ' and ', lower = True,  sorting = True)
-        self.aut_h              = self.__h_index()
+        self.aut_h              = self.h_index()
+        self.aut_g              = self.g_index()
         self.aut_docs           = [len(item) for item in self.aut]
         self.aut_single         = len([item  for item in self.aut_docs if item == 1])
         self.aut_multi          = [item for item in self.aut_docs if item > 1]
@@ -1640,23 +1644,25 @@ class pbx_probe():
         inst                   = [top for top in top_institutions]
         flattened_institutions = [institution for sublist in top_institutions for institution in sublist]
         u_inst                 = list(set(flattened_institutions))
+        u_inst                 = [re.sub(r'^(?:[A-Za-z]\.\s?)+', '', name) for name in u_inst]
         self.author_inst_map   = {author: [] for author in self.u_aut}
         for index, institutions in enumerate(inst):
             for author in self.aut[index]:
                 for institution in inst[index]:
                     for _, aff in enumerate(processed_affiliations[index].split(';')):
                         if (author in aff and institution in aff):
-                            self.author_inst_map[author].append((index, institution))
+                            self.author_inst_map[author].append((index, re.sub(r'^(?:[A-Za-z]\.\s?)+', '', institution)))
                 if (len(self.author_inst_map[author]) == 0):
                     self.author_inst_map[author].append((index, 'UNKNOWN'))
-        inst = []
+        self.author_inst_map = {k: list(set(v)) for k, v in self.author_inst_map.items()}
+        inst                 = []
         for index, row in self.data.iterrows():
             row_inst = []
             for author in self.aut[index]: 
                 if (author in self.author_inst_map):
                     for row_idx, uni in self.author_inst_map[author]:
                         if (row_idx == index):
-                            row_inst.append(uni)
+                            row_inst.append(re.sub(r'^(?:[A-Za-z]\.\s?)+', '', uni))
             inst.append(row_inst)
         self.corr_a_inst_map = {}
         for index, row in self.data.iterrows():
@@ -2101,6 +2107,11 @@ class pbx_probe():
                     all_years_data[country] = 0
                 all_years_data[country] = all_years_data[country] + count
         yearly_data['All Years'] = all_years_data
+        self.ask_gpt_cp          = pd.DataFrame(yearly_data)
+        self.ask_gpt_cp          = self.ask_gpt_cp.fillna(0).astype(int)
+        self.ask_gpt_cp['total'] = self.ask_gpt_cp.sum(axis = 1)
+        self.ask_gpt_cp          = self.ask_gpt_cp.sort_values(by = 'total', ascending = False)
+        self.ask_gpt_cp          = self.ask_gpt_cp.drop(columns = 'total')
         frames                   = []
         for year in yearly_data:
             frame_data = yearly_data[year]
@@ -2144,7 +2155,7 @@ class pbx_probe():
                                         lakecolor      = 'blue',
                                         showrivers     = False,
                                         resolution     = 50,
-                                        lataxis        =dict(range = [-60, 90]),
+                                        lataxis        = dict(range = [-60, 90]),
                     ),
             showlegend  = False,
             hovermode   = 'closest',
@@ -2173,8 +2184,208 @@ class pbx_probe():
                 )
             ]
         )
-        fig = go.Figure(data=[initial_data], layout = layout, frames = frames)
+        fig = go.Figure(data = [initial_data], layout = layout, frames = frames)
         fig.show()
+        return
+
+    # Function: Institutions' Productivity Plot
+    def institution_productivity(self, view = 'browser', topn = 20): 
+        if (view == 'browser'):
+            pio.renderers.default = 'browser'
+        if (topn > len(self.u_uni)):
+            topn = len(self.u_uni)
+        years        = list(range(self.date_str, self.date_end+1))    
+        dicty        = dict(zip(years, list(range(0, len(years)))))
+        idx          = sorted(range(0, len(self.uni_count)), key = self.uni_count.__getitem__)
+        idx.reverse()
+        key          = [self.u_uni[i] for i in idx]
+        key          = key[:topn]
+        n_id         = [[ [] for item in years] for item in key]
+        productivity = pd.DataFrame(np.zeros((topn, len(years))), index = key, columns = years)
+        Xv           = []
+        Yv           = []
+        Xe           = []
+        Ye           = []
+        for n in range(0, len(key)):
+            name = key[n]
+            docs = [i for i in range(0, len(self.uni)) if name in self.uni[i]]
+            for i in docs:
+                j                       = dicty[int(self.data.loc[i, 'year'])]
+                productivity.iloc[n, j] = productivity.iloc[n, j] + 1
+                n_id[n][j].append( 'id: '+str(i)+' ('+name+', '+self.data.loc[i, 'year']+')')
+                Xv.append(n)
+                Yv.append(j)
+        self.ask_gpt_ip = productivity.copy(deep = True)
+        self.ask_gpt_ip = self.ask_gpt_ip.loc[(self.ask_gpt_ip.sum(axis = 1) != 0), (self.ask_gpt_ip.sum(axis = 0) != 0)]
+        node_list_a     = [ str(int(productivity.iloc[Xv[i], Yv[i]])) for i in range(0, len(Xv)) ]
+        nid_list        = [ n_id[Xv[i]][Yv[i]] for i in range(0, len(Xv)) ]
+        nid_list_a      = []
+        for item in nid_list:
+            if (len(item) == 1):
+                nid_list_a.append(item)
+            else:
+                itens = []
+                itens.append(item[0])
+                for i in range(1, len(item)):
+                    itens[0] = itens[0]+'<br>'+item[i]
+                nid_list_a.append(itens)
+        nid_list_a = [txt[0] for txt in nid_list_a]
+        for i in range(0, len(Xv)-1):
+            if (Xv[i] == Xv[i+1]):
+                Xe.append(Xv[i]*1.00)
+                Xe.append(Xv[i+1]*1.00)
+                Xe.append(None)
+                Ye.append(Yv[i]*1.00)
+                Ye.append(Yv[i+1]*1.00)
+                Ye.append(None)
+        a_trace = go.Scatter(x         = Ye,
+                             y         = Xe,
+                             mode      = 'lines',
+                             line      = dict(color = 'rgba(255, 0, 0, 1)', width = 1.5, dash = 'solid'),
+                             hoverinfo = 'none',
+                             name      = ''
+                             )
+        n_trace = go.Scatter(x         = Yv,
+                             y         = Xv,
+                             opacity   = 1,
+                             mode      = 'markers+text',
+                             marker    = dict(symbol = 'circle-dot', size = 25, color = '#ff7f0e'),
+                             text      = node_list_a,
+                             hoverinfo = 'text',
+                             hovertext = nid_list_a,
+                             name      = ''
+                             )
+        layout  = go.Layout(showlegend   = False,
+                            hovermode    = 'closest',
+                            margin       = dict(b = 10, l = 5, r = 5, t = 10),
+                            plot_bgcolor = '#e0e0e0',
+                            xaxis        = dict(  showgrid       = True, 
+                                                  gridcolor      = 'grey',
+                                                  zeroline       = False, 
+                                                  showticklabels = True, 
+                                                  tickmode       = 'array', 
+                                                  tickvals       = list(range(0, len(years))),
+                                                  ticktext       = years,
+                                                  spikedash      = 'solid',
+                                                  spikecolor     = 'blue',
+                                                  spikethickness = 2
+                                               ),
+                            yaxis        = dict(  showgrid       = True, 
+                                                  gridcolor      = 'grey',
+                                                  zeroline       = False, 
+                                                  showticklabels = True,
+                                                  tickmode       = 'array', 
+                                                  tickvals       = list(range(0, topn)),
+                                                  ticktext       = key,
+                                                  spikedash      = 'solid',
+                                                  spikecolor     = 'blue',
+                                                  spikethickness = 2
+                                                )
+                            )
+        fig_inst = go.Figure(data = [a_trace, n_trace], layout = layout)
+        fig_inst.update_traces(textfont_size = 10, textfont_color = 'white') 
+        fig_inst.update_yaxes(autorange = 'reversed')
+        fig_inst.show() 
+        return 
+
+    # Function: Sources' Productivity Plot
+    def source_productivity(self, view = 'browser', topn = 20): 
+        if (view == 'browser'):
+            pio.renderers.default = 'browser'
+        if (topn > len(self.u_jou)):
+            topn = len(self.u_jou)
+        years        = list(range(self.date_str, self.date_end+1))    
+        dicty        = dict(zip(years, list(range(0, len(years)))))
+        idx          = sorted(range(0, len(self.jou_count)), key = self.jou_count.__getitem__)
+        idx.reverse()
+        key          = [self.u_jou[i] for i in idx]
+        key          = key[:topn]
+        n_id         = [[ [] for item in years] for item in key]
+        productivity = pd.DataFrame(np.zeros((topn, len(years))), index = key, columns = years)
+        Xv           = []
+        Yv           = []
+        Xe           = []
+        Ye           = []
+        for n in range(0, len(key)):
+            name = key[n]
+            docs = [i for i in range(0, len(self.jou)) if name in self.jou[i]]
+            for i in docs:
+                j                       = dicty[int(self.data.loc[i, 'year'])]
+                productivity.iloc[n, j] = productivity.iloc[n, j] + 1
+                n_id[n][j].append( 'id: '+str(i)+' ('+name+', '+self.data.loc[i, 'year']+')')
+                Xv.append(n)
+                Yv.append(j)
+        self.ask_gpt_sp = productivity.copy(deep = True)
+        self.ask_gpt_sp = self.ask_gpt_sp.loc[(self.ask_gpt_sp.sum(axis = 1) != 0), (self.ask_gpt_sp.sum(axis = 0) != 0)]
+        node_list_a     = [ str(int(productivity.iloc[Xv[i], Yv[i]])) for i in range(0, len(Xv)) ]
+        nid_list        = [ n_id[Xv[i]][Yv[i]] for i in range(0, len(Xv)) ]
+        nid_list_a      = []
+        for item in nid_list:
+            if (len(item) == 1):
+                nid_list_a.append(item)
+            else:
+                itens = []
+                itens.append(item[0])
+                for i in range(1, len(item)):
+                    itens[0] = itens[0]+'<br>'+item[i]
+                nid_list_a.append(itens)
+        nid_list_a = [txt[0] for txt in nid_list_a]
+        for i in range(0, len(Xv)-1):
+            if (Xv[i] == Xv[i+1]):
+                Xe.append(Xv[i]*1.00)
+                Xe.append(Xv[i+1]*1.00)
+                Xe.append(None)
+                Ye.append(Yv[i]*1.00)
+                Ye.append(Yv[i+1]*1.00)
+                Ye.append(None)
+        a_trace = go.Scatter(x         = Ye,
+                             y         = Xe,
+                             mode      = 'lines',
+                             line      = dict(color = 'rgba(255, 0, 0, 1)', width = 1.5, dash = 'solid'),
+                             hoverinfo = 'none',
+                             name      = ''
+                             )
+        n_trace = go.Scatter(x         = Yv,
+                             y         = Xv,
+                             opacity   = 1,
+                             mode      = 'markers+text',
+                             marker    = dict(symbol = 'circle-dot', size = 25, color = 'green'),
+                             text      = node_list_a,
+                             hoverinfo = 'text',
+                             hovertext = nid_list_a,
+                             name      = ''
+                             )
+        layout  = go.Layout(showlegend   = False,
+                            hovermode    = 'closest',
+                            margin       = dict(b = 10, l = 5, r = 5, t = 10),
+                            plot_bgcolor = '#e0e0e0',
+                            xaxis        = dict(  showgrid       = True, 
+                                                  gridcolor      = 'grey',
+                                                  zeroline       = False, 
+                                                  showticklabels = True, 
+                                                  tickmode       = 'array', 
+                                                  tickvals       = list(range(0, len(years))),
+                                                  ticktext       = years,
+                                                  spikedash      = 'solid',
+                                                  spikecolor     = 'blue',
+                                                  spikethickness = 2
+                                               ),
+                            yaxis        = dict(  showgrid       = True, 
+                                                  gridcolor      = 'grey',
+                                                  zeroline       = False, 
+                                                  showticklabels = True,
+                                                  tickmode       = 'array', 
+                                                  tickvals       = list(range(0, topn)),
+                                                  ticktext       = key,
+                                                  spikedash      = 'solid',
+                                                  spikecolor     = 'blue',
+                                                  spikethickness = 2
+                                                )
+                            )
+        fig_inst = go.Figure(data = [a_trace, n_trace], layout = layout)
+        fig_inst.update_traces(textfont_size = 10, textfont_color = 'white') 
+        fig_inst.update_yaxes(autorange = 'reversed')
+        fig_inst.show() 
         return
 
     # Function: Evolution per Year
@@ -2802,7 +3013,7 @@ class pbx_probe():
     #############################################################################
     
     # Function: Hirsch Index
-    def __h_index(self):
+    def h_index(self):
         h_i                     = []
         researcher_to_citations = {researcher: [] for researcher in self.u_aut}
         for i, researchers in enumerate(self.aut):
@@ -2821,6 +3032,63 @@ class pbx_probe():
             h_i.append(h)
         return h_i
     
+    # Function: G-Index
+    def g_index(self):
+        g_i                     = []
+        researcher_to_citations = {researcher: [] for researcher in self.u_aut}
+        for i, authors in enumerate(self.aut):
+            for researcher in authors:
+                if (researcher in researcher_to_citations):
+                    citation_val = self.citation[i]
+                    if isinstance(citation_val, int):
+                        researcher_to_citations[researcher].append(citation_val)
+                    else:
+                        try:
+                            citation_int = int(citation_val)
+                            researcher_to_citations[researcher].append(citation_int)
+                        except:
+                            pass
+        for researcher in self.u_aut:
+            citations      = researcher_to_citations[researcher]
+            citations.sort(reverse = True)
+            cumulative_sum = 0
+            g              = 0
+            for idx, citation in enumerate(citations):
+                cumulative_sum = cumulative_sum + citation
+                if (cumulative_sum >= (idx + 1) ** 2):
+                    g = idx + 1
+                else:
+                    break
+            g_i.append(g)
+        return g_i
+
+    # Function: M-Index
+    def m_index(self, current_year):
+        m_i                 = [] 
+        researcher_to_years = {researcher: [] for researcher in self.u_aut}
+        for i, authors in enumerate(self.aut):
+            for researcher in authors:
+                if (researcher in researcher_to_years):
+                    year_val = self.dy[i]
+                    if (year_val != -1):
+                        try:
+                            researcher_to_years[researcher].append(float(year_val))
+                        except:
+                            pass
+        h_indices = self.h_index()
+        for idx, researcher in enumerate(self.u_aut):
+            if (researcher_to_years[researcher]):
+                first_year    = min(researcher_to_years[researcher])
+                career_length = current_year - first_year + 1
+                if (career_length < 1):
+                    career_length = 1
+                m_value = h_indices[idx] / career_length
+            else:
+                m_value = None
+            m_i.append(m_value)
+        return m_i
+
+    # Function: Total and Self Citations
     def __total_and_self_citations(self):
         preprocessed_refs = [ [ref.lower() for ref in refs] for refs in self.ref ]
         t_c               = []
