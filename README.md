@@ -31,11 +31,13 @@ General Capabilities:
 - n) Creates a **TreeMap (interactive plot)** from the Authors, Countries, Institutions, Journals, Auhors_Keywords, or Keywords_Plus
 - o) Creates an **Authors Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each author
 - p) Creates a **Countries Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each country (each author's country)
-- q) Creates a **Bar Plot (interactive plot)**  for the following statistics: Documents per Year, Citations per Year, Past Citations per Year, Lotka's Law, Sources per Documents, Sources per Citations, Authors per Documents, Authors per Citations, Authors per H-Index, Bradford's Law (Core Sources 1, 2 or 3), Institutions per Documents, Institutions per Citations, Countries per Documents, Countries per Citations, Language per Documents, Keywords Plus per Documents and Authors' Keywords per Documents
-- r) Creates a **Top Reference Plot (interactive plot)** to visualize the top cited References
-- s) Creates a **Citation Trajectory Plot (interactive plot)**  that shows the yearly citation counts for each selected Reference
-- t) Creates a **Citation Matrix** that shows for each Reference, which citing articles (with their publication years) mentioned that Reference, the Unique Reference ID, and the Reference's publication year
-- u) Creates a **RPYS-Reference Publication Year Spectroscopy (interactive plot)** to visualize citation patterns over the years. Revealing the peaks in reference publication years (trough Gaussian Filters) that might indicate influential works or shifts in research trends
+- q) Creates a **Institutions Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each institution (each author's institution)
+- r) Creates a **Sources Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each source (journal)
+- s) Creates a **Bar Plot (interactive plot)**  for the following statistics: Documents per Year, Citations per Year, Past Citations per Year, Lotka's Law, Sources per Documents, Sources per Citations, Authors per Documents, Authors per Citations, Authors per H-Index, Bradford's Law (Core Sources 1, 2 or 3), Institutions per Documents, Institutions per Citations, Countries per Documents, Countries per Citations, Language per Documents, Keywords Plus per Documents and Authors' Keywords per Documents
+- t) Creates a **Top Reference Plot (interactive plot)** to visualize the top cited References
+- u) Creates a **Citation Trajectory Plot (interactive plot)**  that shows the yearly citation counts for each selected Reference
+- v) Creates a **Citation Matrix** that shows for each Reference, which citing articles (with their publication years) mentioned that Reference, the Unique Reference ID, and the Reference's publication year
+- w) Creates a **RPYS-Reference Publication Year Spectroscopy (interactive plot)** to visualize citation patterns over the years. Revealing the peaks in reference publication years (trough Gaussian Filters) that might indicate influential works or shifts in research trends
 
 Network Capabilities:
 - a) Creates a **Top Reference Set Matrix**, which, for a given group size n, identifies and returns the most frequently co-cited Reference groups of size n
