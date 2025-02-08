@@ -1645,6 +1645,7 @@ class pbx_probe():
         flattened_institutions = [institution for sublist in top_institutions for institution in sublist]
         u_inst                 = list(set(flattened_institutions))
         u_inst                 = [re.sub(r'^(?:[A-Za-z]\.\s?)+', '', name) for name in u_inst]
+        u_inst                 = list(set(u_inst))
         self.author_inst_map   = {author: [] for author in self.u_aut}
         for index, institutions in enumerate(inst):
             for author in self.aut[index]:
