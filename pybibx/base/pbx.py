@@ -504,99 +504,77 @@ class pbx_probe():
     
     # Function: Prepare .bib File
     def __make_bib(self, verbose = True):
-        self.ask_gpt_ap         = -1
-        self.ask_gpt_cp         = -1
-        self.ask_gpt_ip         = -1
-        self.ask_gpt_sp         = -1
-        self.ask_gpt_bp         = -1
-        self.ask_gpt_ct         = -1
-        self.ask_gpt_ep         = -1
-        self.ask_gpt_ng         = -1
-        self.ask_gpt_rt         = -1
-        self.ask_gpt_sk         = -1
-        self.ask_gpt_wd         = -1
-        self.author_country_map = -1
-        self.corr_a_country_map = -1
-        self.frst_a_country_map = -1
-        self.author_inst_map    = -1
-        self.corr_a_inst_map    = -1
-        self.frst_a_inst_map    = -1  
-        self.top_y_x            = -1
-        self.top_refs           = -1
-        self.rpys_pk            = -1
-        self.rpys_rs            = -1
-        self.top_co_c           = -1
-        self.data['year']       = self.data['year'].replace('UNKNOWN', '0')
-        self.dy                 = pd.to_numeric(self.data['year'], downcast = 'float')
-        self.date_str           = int(self.dy.min())
-        self.date_end           = int(self.dy.max())
-        self.doc_types          = self.data['document_type'].value_counts().sort_index()
-        self.av_d_year          = self.dy.value_counts().sort_index()
-        self.av_d_year          = round(self.av_d_year.mean(), 2)
-        self.citation           = self.__get_citations(self.data['note'])
-        self.av_c_doc           = round(sum(self.citation)/self.data.shape[0], 2)
-        self.ref, self.u_ref    = self.__get_str(entry = 'references', s = ';',     lower = False, sorting = True)
-        self.aut, self.u_aut    = self.__get_str(entry = 'author',     s = ' and ', lower = True,  sorting = True)
-        self.aut_h              = self.h_index()
-        self.aut_g              = self.g_index()
-        self.aut_docs           = [len(item) for item in self.aut]
-        self.aut_single         = len([item  for item in self.aut_docs if item == 1])
-        self.aut_multi          = [item for item in self.aut_docs if item > 1]
-        self.aut_cit            = self.__get_counts(self.u_aut, self.aut, self.citation)
-        self.author_to_papers   = defaultdict(list)
+        self.ask_gpt_ap            = -1
+        self.ask_gpt_cp            = -1
+        self.ask_gpt_ip            = -1
+        self.ask_gpt_sp            = -1
+        self.ask_gpt_bp            = -1
+        self.ask_gpt_ct            = -1
+        self.ask_gpt_ep            = -1
+        self.ask_gpt_ng            = -1
+        self.ask_gpt_rt            = -1
+        self.ask_gpt_sk            = -1
+        self.ask_gpt_wd            = -1
+        self.author_country_map    = -1
+        self.corr_a_country_map    = -1
+        self.frst_a_country_map    = -1
+        self.author_inst_map       = -1
+        self.corr_a_inst_map       = -1
+        self.frst_a_inst_map       = -1  
+        self.top_y_x               = -1
+        self.top_refs              = -1
+        self.rpys_pk               = -1
+        self.rpys_rs               = -1
+        self.top_co_c              = -1
+        self.data['year']          = self.data['year'].replace('UNKNOWN', '0')
+        self.dy                    = pd.to_numeric(self.data['year'], downcast = 'float')
+        self.date_str              = int(self.dy.min())
+        self.date_end              = int(self.dy.max())
+        self.doc_types             = self.data['document_type'].value_counts().sort_index()
+        self.av_d_year             = self.dy.value_counts().sort_index()
+        self.av_d_year             = round(self.av_d_year.mean(), 2)
+        self.citation              = self.__get_citations(self.data['note'])
+        self.av_c_doc              = round(sum(self.citation)/self.data.shape[0], 2)
+        self.ref, self.u_ref       = self.__get_str(entry = 'references', s = ';',     lower = False, sorting = True)
+        self.aut, self.u_aut       = self.__get_str(entry = 'author',     s = ' and ', lower = True,  sorting = True)
+        self.aut_h                 = self.h_index()
+        self.aut_g                 = self.g_index()
+        self.aut_docs              = [len(item) for item in self.aut]
+        self.aut_single            = len([item  for item in self.aut_docs if item == 1])
+        self.aut_multi             = [item for item in self.aut_docs if item > 1]
+        self.aut_cit               = self.__get_counts(self.u_aut, self.aut, self.citation)
+        self.author_to_papers      = defaultdict(list)
         for paper_idx, authors in enumerate(self.aut):
             for author in authors:
                 self.author_to_papers[author].append(paper_idx)
-        self.kid, self.u_kid    = self.__get_str(entry = 'keywords', s = ';', lower = True, sorting = True)
-        self.u_kid              = [kid for kid in self.u_kid if kid.lower() != 'unknown']
-        self.kid_               = [item for sublist in self.kid for item in sublist]
-        self.kid_count          = [self.kid_.count(item) for item in self.u_kid]
-        idx                     = sorted(range(len(self.kid_count)), key = self.kid_count.__getitem__)
-        idx.reverse()
-        self.u_kid              = [self.u_kid[i] for i in idx]
-        self.kid_count          = [self.kid_count[i] for i in idx]
-        self.auk, self.u_auk    = self.__get_str(entry = 'author_keywords', s = ';', lower = True, sorting = True)
-        self.u_auk              = [auk for auk in self.u_auk if auk.lower() != 'unknown']
-        self.auk_               = [item for sublist in self.auk for item in sublist]
-        self.auk_count          = [self.auk_.count(item) for item in self.u_auk]
-        idx                     = sorted(range(len(self.auk_count)), key = self.auk_count.__getitem__)
-        idx.reverse()
-        self.u_auk              = [self.u_auk[i] for i in idx]
-        self.auk_count          = [self.auk_count[i] for i in idx]
-        self.jou, self.u_jou    = self.__get_str(entry = 'abbrev_source_title', s = ';', lower = True, sorting = True)
-        self.u_jou              = [jou for jou in self.u_jou if jou.lower() != 'unknown']
-        jou_                    = [item for sublist in self.jou for item in sublist]
-        self.jou_count          = [jou_.count(item) for item in self.u_jou]
-        idx                     = sorted(range(len(self.jou_count)), key = self.jou_count.__getitem__)
-        idx.reverse()
-        self.u_jou              = [self.u_jou[i] for i in idx]
-        self.jou_count          = [self.jou_count[i] for i in idx]
-        self.jou_cit            = self.__get_counts(self.u_jou, self.jou, self.citation)
-        self.jou_cit            = self.__get_counts(self.u_jou, self.jou, self.citation)
-        self.lan, self.u_lan    = self.__get_str(entry = 'language', s = '.', lower = True, sorting = True) 
-        lan_                    = [item for sublist in self.lan for item in sublist]
-        self.lan_count          = [lan_.count(item) for item in self.u_lan]
-        self.ctr, self.u_ctr    = self.__get_countries()
-        self.ctr                = self.replace_unknowns(self.ctr)
-        ctr_                    = [self.ctr[i][j] for i in range(0, len(self.aut)) for j in range(0, len(self.aut[i]))]
-        self.ctr_count          = [ctr_.count(item) for item in self.u_ctr]
-        self.ctr_cit            = self.__get_counts(self.u_ctr, self.ctr, self.citation)
-        self.uni, self.u_uni    = self.__get_institutions() 
-        self.uni                = self.replace_unknowns(self.uni)
-        uni_                    = [item for sublist in self.uni for item in sublist]
-        self.uni_count          = [uni_.count(item) for item in self.u_uni]
-        self.uni_cit            = self.__get_counts(self.u_uni, self.uni, self.citation)
-        self.doc_aut            = self.__get_counts(self.u_aut, self.aut)
-        self.av_doc_aut         = round(sum(self.doc_aut)/len(self.doc_aut), 2)
-        self.t_c, self.s_c      = self.__total_and_self_citations()
-        self.r_c                = [self.s_c[i]/max(self.t_c[i], 1) for i in range(0, len(self.t_c))]
-        self.natsort            = lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', s)]  
-        self.dy_c_year          = self.__get_collaboration_year()
-        self.u_ref              = [ref for ref in self.u_ref if ref.lower() != 'unknown']
-        self.dy_ref             = self.__get_ref_year()
-        self.u_ref_id           = self.__get_ref_id()
-        ref_map                 = dict(zip(self.u_ref, self.u_ref_id))
-        self.ref_id             = []
+        self.kid, self.u_kid       = self.__get_str(entry = 'keywords', s = ';', lower = True, sorting = True)
+        self.u_kid, self.kid_count = self.filter_list(u_e = self.u_kid, e = self.kid)
+        self.auk, self.u_auk       = self.__get_str(entry = 'author_keywords', s = ';', lower = True, sorting = True)
+        self.u_auk, self.auk_count = self.filter_list(u_e = self.u_auk, e = self.auk)
+        self.jou, self.u_jou       = self.__get_str(entry = 'abbrev_source_title', s = ';', lower = True, sorting = True)
+        self.u_jou, self.jou_count = self.filter_list(u_e = self.u_jou, e = self.jou)
+        self.jou_cit               = self.__get_counts(self.u_jou, self.jou, self.citation)
+        self.lan, self.u_lan       = self.__get_str(entry = 'language', s = '.', lower = True, sorting = True)
+        self.u_lan, self.lan_count = self.filter_list(u_e = self.u_lan, e = self.lan, simple = True)
+        self.ctr, self.u_ctr       = self.__get_countries()
+        self.ctr                   = self.replace_unknowns(self.ctr)
+        self.u_ctr, self.ctr_count = self.filter_list(u_e = self.u_ctr, e = self.ctr, simple = True)
+        self.ctr_cit               = self.__get_counts(self.u_ctr, self.ctr, self.citation)
+        self.uni, self.u_uni       = self.__get_institutions() 
+        self.uni                   = self.replace_unknowns(self.uni)
+        self.u_uni, self.uni_count = self.filter_list(u_e = self.u_uni, e = self.uni, simple = True)
+        self.uni_cit               = self.__get_counts(self.u_uni, self.uni, self.citation)
+        self.doc_aut               = self.__get_counts(self.u_aut, self.aut)
+        self.av_doc_aut            = round(sum(self.doc_aut)/len(self.doc_aut), 2)
+        self.t_c, self.s_c         = self.__total_and_self_citations()
+        self.r_c                   = [self.s_c[i]/max(self.t_c[i], 1) for i in range(0, len(self.t_c))]
+        self.natsort               = lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', s)]  
+        self.dy_c_year             = self.__get_collaboration_year()
+        self.u_ref                 = [ref for ref in self.u_ref if ref.lower() != 'unknown']
+        self.dy_ref                = self.__get_ref_year()
+        self.u_ref_id              = self.__get_ref_id()
+        ref_map                    = dict(zip(self.u_ref, self.u_ref_id))
+        self.ref_id                = []
         for ref_list in self.ref:
             r_id = [ref_map.get(ref, ref) for ref in ref_list]
             self.ref_id.append(r_id)
@@ -679,7 +657,22 @@ class pbx_probe():
         report_dt = pd.DataFrame(dt_ids, columns = ['Document Types', 'IDs'])
         return report_dt
 
-    # Function: Filter
+    # Function: Filter Lists
+    def filter_list(self, u_e = [], e = [], simple = False):
+        if (simple == True):
+            e_      = [item for sublist in e for item in sublist]
+            e_count = [e_.count(item) for item in u_e]   
+        else:
+            u_e     = [item for item in u_e if item.lower() != 'unknown']
+            e_      = [item for sublist in e for item in sublist]
+            e_count = [e_.count(item) for item in u_e]
+            idx     = sorted(range(len(e_count)), key = e_count.__getitem__)
+            idx.reverse()
+            u_e     = [u_e[i]     for i in idx]
+            e_count = [e_count[i] for i in idx]
+        return u_e, e_count
+
+    # Function: Filter Bib
     def filter_bib(self, documents = [], doc_type = [], year_str = -1, year_end = -1, sources = [], core = -1, country = [], language = [], abstract = False):
         docs = []
         if (len(documents) > 0):
@@ -5574,14 +5567,23 @@ class pbx_probe():
 ############################################################################
 
     # Function: Ask chatGPT about Authors Productivity by Year
-    def ask_chatgpt_ap(self, char_limit = 4097, api_key = 'your_api_key_here', query = 'give me insights about the following information, related to authors productivity by year', model = 'text-davinci-003', max_tokens = 2000, n = 1, temperature = 0.8):
+    def ask_chatgpt_ap(self, char_limit = 4097, api_key = 'your_api_key_here', query = 'give me insights about the following information, related to authors productivity by year', model = 'text-davinci-003', max_tokens = 2000, n = 1, temperature = 0.8, entry = 'aut'):
         flag                     = 0
         os.environ['OPENAI_KEY'] = api_key
         corpus = ''
-        for author, row in self.ask_gpt_ap.iterrows():
+        df     = []
+        if (entry == 'cout'):
+            df = self.ask_gpt_cp
+        elif (entry == 'inst'):
+            df = self.ask_gpt_ip
+        elif (entry == 'jou'):
+            df = self.ask_gpt_sp
+        elif (entry == 'aut'):
+            df = self.ask_gpt_ap
+        for element, row in df.iterrows():
             years        = [(year, row[year]) for year in row.index if row[year] > 0]
             paper_counts = ', '.join([f'({year}: {count} paper{"s" if count > 1 else ""})' for year, count in years])
-            corpus       = corpus +  f'{author} {paper_counts}\n'
+            corpus       = corpus +  f'{element} {paper_counts}\n'
         prompt                   = query + ':\n\n' + f'{corpus}\n'
         prompt                   = prompt[:char_limit]
         
@@ -5819,14 +5821,23 @@ class pbx_probe():
 ############################################################################
 
     # Function: Ask Gemini about Authors Productivity by Year
-    def ask_gemini_ap(self, char_limit = 4097, api_key = 'your_api_key_here', query = 'give me insights about the following information, related to authors productivity by year', model = 'gemini-1.5-flash'):
+    def ask_gemini_ap(self, char_limit = 4097, api_key = 'your_api_key_here', query = 'give me insights about the following information, related to authors productivity by year', model = 'gemini-1.5-flash', entry = 'aut'):
         genai.configure(api_key = api_key)
         gem    = genai.GenerativeModel(model)
         corpus = ''
-        for author, row in self.ask_gpt_ap.iterrows():
+        df     = []
+        if (entry == 'cout'):
+            df = self.ask_gpt_cp
+        elif (entry == 'inst'):
+            df = self.ask_gpt_ip
+        elif (entry == 'jou'):
+            df = self.ask_gpt_sp
+        elif (entry == 'aut'):
+            df = self.ask_gpt_ap
+        for element, row in df.iterrows():
             years        = [(year, row[year]) for year in row.index if row[year] > 0]
             paper_counts = ', '.join([f'({year}: {count} paper{"s" if count > 1 else ""})' for year, count in years])
-            corpus       = corpus +  f'{author} {paper_counts}\n'
+            corpus       = corpus +  f'{element} {paper_counts}\n'
         prompt  = query + ':\n\n' + f'{corpus}\n'
         prompt  = prompt[:char_limit]
         analyze = gem.generate_content(prompt)
