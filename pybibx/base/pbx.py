@@ -539,6 +539,7 @@ class pbx_probe():
         self.aut, self.u_aut       = self.__get_str(entry = 'author',     s = ' and ', lower = True,  sorting = True)
         self.aut_h                 = self.h_index()
         self.aut_g                 = self.g_index()
+        self.aut_e                 = self.e_index()
         self.aut_docs              = [len(item) for item in self.aut]
         self.aut_single            = len([item  for item in self.aut_docs if item == 1])
         self.aut_multi             = [item for item in self.aut_docs if item > 1]
@@ -3069,18 +3070,46 @@ class pbx_probe():
                             researcher_to_years[researcher].append(float(year_val))
                         except:
                             pass
-        h_indices = self.h_index()
         for idx, researcher in enumerate(self.u_aut):
             if (researcher_to_years[researcher]):
                 first_year    = min(researcher_to_years[researcher])
                 career_length = current_year - first_year + 1
                 if (career_length < 1):
                     career_length = 1
-                m_value = h_indices[idx] / career_length
+                m_value = self.aut_h[idx] / career_length
             else:
                 m_value = None
             m_i.append(m_value)
         return m_i
+    
+    # Function: E-Index    
+    def e_index(self):
+        researcher_to_citations = {researcher: [] for researcher in self.u_aut}
+        for i, authors in enumerate(self.aut):
+            for researcher in authors:
+                if (researcher in researcher_to_citations):
+                    citation_val = self.citation[i]
+                    if isinstance(citation_val, int):
+                        researcher_to_citations[researcher].append(citation_val)
+                    else:
+                        try:
+                            citation_int = int(citation_val)
+                            researcher_to_citations[researcher].append(citation_int)
+                        except:
+                            pass
+        e_indices = []
+        for researcher, h in zip(self.u_aut, self.aut_h):
+            citations  = researcher_to_citations[researcher]
+            citations.sort(reverse = True)
+            excess_sum = 0
+            for i in range(h):
+                if (i < len(citations)):
+                    excess = citations[i] - h
+                    if (excess > 0):
+                        excess_sum = excess_sum + excess
+            e_value = np.sqrt(excess_sum)
+            e_indices.append(e_value)
+        return e_indices
 
     # Function: Total and Self Citations
     def __total_and_self_citations(self):
@@ -3241,7 +3270,7 @@ class pbx_probe():
         return dtm
    
     # Function: Projection
-    def docs_projection(self, view = 'browser', corpus_type = 'abs', stop_words = ['en'], rmv_custom_words = [], custom_label = [], custom_projection = [], n_components = 2, n_clusters = 5, node_labels = True, node_size = 25, node_font_size = 10, tf_idf = True, embeddings = False, method = 'tsvd', showlegend = False):
+    def docs_projection(self, view = 'browser', corpus_type = 'abs', stop_words = ['en'], rmv_custom_words = [], custom_label = [], custom_projection = [], n_components = 2, n_clusters = 5, node_labels = True, node_size = 25, node_font_size = 10, tf_idf = True, embeddings = False, method = 'tsvd', model = 'allenai/scibert_scivocab_uncased', showlegend = False):
         if   (corpus_type == 'abs'):
             corpus = self.data['abstract']
             corpus = corpus.tolist()
@@ -3259,7 +3288,7 @@ class pbx_probe():
         if (view == 'browser' ):
             pio.renderers.default = 'browser'
         if (embeddings == True):
-            model = SentenceTransformer('all-MiniLM-L6-v2')
+            model = SentenceTransformer(model) # 'allenai/scibert_scivocab_uncased'; 'all-MiniLM-L6-v2'
             embds = model.encode(corpus)
         dtm = self.dtm_tf_idf(corpus)
         if (method.lower() == 'umap'):
@@ -3316,7 +3345,7 @@ class pbx_probe():
                                       text      = node_list,
                                       hoverinfo = 'text',
                                       hovertext = n_id,
-                                      name      = ''
+                                      name      = f'Cluster {i}'
                                       ))
             
         layout  = go.Layout(showlegend   = showlegend,
@@ -3670,7 +3699,7 @@ class pbx_probe():
         self.matrix_a = pd.DataFrame.sparse.from_spmatrix(adjacency, index = tgt_entry_u, columns = tgt_entry_u)
         self.labels_a = [tgt_label + str(i) for i in range(0, n_items)]
         self.n_colab  = n_colab.tolist()
-        return self
+        return
     
     # Function: Country Colaboration Adjacency Matrix
     def __adjacency_matrix_ctr(self, min_colab = 1):
@@ -3701,7 +3730,7 @@ class pbx_probe():
         self.matrix_a = pd.DataFrame.sparse.from_spmatrix(adjacency, index = tgt_entry_u, columns = tgt_entry_u)
         self.labels_a = [tgt_label + str(i) for i in range(0, n_items)]
         self.n_colab  = n_colab.tolist()
-        return self
+        return
 
     # Function: Institution Colaboration Adjacency Matrix   
     def __adjacency_matrix_inst(self, min_colab = 1):
@@ -3732,7 +3761,7 @@ class pbx_probe():
         self.matrix_a = pd.DataFrame.sparse.from_spmatrix(adjacency, index = tgt_entry_u, columns = tgt_entry_u)
         self.labels_a = [tgt_label + str(i) for i in range(0, n_items)]
         self.n_colab  = n_colab.tolist()
-        return self
+        return
     
     # Function: KWA Colaboration Adjacency Matrix   
     def __adjacency_matrix_kwa(self, min_colab = 1):
@@ -3763,7 +3792,7 @@ class pbx_probe():
         self.matrix_a = pd.DataFrame.sparse.from_spmatrix(adjacency, index = tgt_entry_u, columns = tgt_entry_u)
         self.labels_a = [self.dict_kwa_id[item] for item in tgt_entry_u] 
         self.n_colab  = n_colab.tolist()
-        return self
+        return
     
     # Function: KWP Colaboration Adjacency Matrix
     def __adjacency_matrix_kwp(self, min_colab = 1):
@@ -3794,7 +3823,7 @@ class pbx_probe():
         self.matrix_a = pd.DataFrame.sparse.from_spmatrix(adjacency, index = tgt_entry_u, columns = tgt_entry_u)
         self.labels_a = [self.dict_kwp_id[item] for item in tgt_entry_u] 
         self.n_colab  = n_colab.tolist()
-        return self
+        return
 
     # Function: References Adjacency Matrix   
     def __adjacency_matrix_ref(self, min_cites = 2, local_nodes = False):
@@ -3852,7 +3881,7 @@ class pbx_probe():
             self.matrix_r = self.matrix_r[cols_to_keep]
             self.labels_r = cols_to_keep.tolist()
         self.matrix_r = self.matrix_r.astype(pd.SparseDtype('float', 0))
-        return self
+        return
 
     # Function: Make Matrix
     def make_matrix(self, entry = 'aut', min_count = 0, local_nodes = False):
@@ -5079,8 +5108,8 @@ class pbx_probe():
 ############################################################################
 
     # Function: Sentence Embeddings # 'abs', 'title', 'kwa', 'kwp'
-    def create_embeddings(self, stop_words = ['en'], rmv_custom_words = [], corpus_type = 'abs'):
-        model = SentenceTransformer('all-MiniLM-L6-v2')
+    def create_embeddings(self, stop_words = ['en'], rmv_custom_words = [], corpus_type = 'abs', model = 'allenai/scibert_scivocab_uncased'): 
+        model = SentenceTransformer(model)
         if  (corpus_type == 'abs'):
             corpus = self.data['abstract']
             corpus = corpus.tolist()
@@ -5096,23 +5125,23 @@ class pbx_probe():
             corpus = self.data['keywords']
             corpus = corpus.tolist()
         self.embds = model.encode(corpus)
-        return self  
+        return 
 
 ############################################################################
 
     # Function: Topics - Create
-    def topics_creation(self, stop_words = ['en'], rmv_custom_words = [], embeddings = False):
+    def topics_creation(self, stop_words = ['en'], rmv_custom_words = [], embeddings = False, model = 'allenai/scibert_scivocab_uncased'):
         umap_model = UMAP(n_neighbors = 15, n_components = 5, min_dist = 0.0, metric = 'cosine', random_state = 1001)
         if (embeddings ==  False):
             self.topic_model = BERTopic(umap_model = umap_model, calculate_probabilities = True)
         else:
-            sentence_model   = SentenceTransformer('all-MiniLM-L6-v2')
+            sentence_model   = SentenceTransformer(model)
             self.topic_model = BERTopic(umap_model = umap_model, calculate_probabilities = True, embedding_model = sentence_model)
         self.topic_corpus       = self.clear_text(self.data['abstract'], stop_words = stop_words, lowercase = True, rmv_accents = True, rmv_special_chars = True, rmv_numbers = True, rmv_custom_words = rmv_custom_words, verbose = False)
         self.topics, self.probs = self.topic_model.fit_transform(self.topic_corpus)
         self.topic_info         = self.topic_model.get_topic_info()
         print(self.topic_info)
-        return self   
+        return  
 
     # Function: Topics - Main Representatives
     def topics_representatives(self):
@@ -5133,7 +5162,7 @@ class pbx_probe():
         self.topics, self.probs = self.topic_model.reduce_topics(docs = self.topic_corpus, nr_topics = topicsn - 1)
         self.topic_info         = self.topic_model.get_topic_info()
         print(self.topic_info)
-        return self 
+        return
     
     # Function: Graph Topics - Topics
     def graph_topics(self, view = 'browser'):
@@ -5170,7 +5199,7 @@ class pbx_probe():
         fig.update_xaxes(showticklabels = False)
         fig.update_layout(paper_bgcolor = 'rgb(255, 255, 255)', plot_bgcolor = 'rgb(255, 255, 255)', showlegend = False)
         fig.show()
-        return self 
+        return 
     
     # Function: Graph Topics - Topics Distribution
     def graph_topics_distribution(self, view = 'browser'):
@@ -5197,7 +5226,7 @@ class pbx_probe():
         fig.update_xaxes(zeroline = False)
         fig.update_layout(paper_bgcolor = 'rgb(189, 189, 189)', plot_bgcolor = 'rgb(189, 189, 189)')
         fig.show()
-        return self 
+        return
     
     # Function: Graph Topics - Projected Topics 
     def graph_topics_projection(self, view = 'browser', method = 'tsvd'):
@@ -5243,7 +5272,7 @@ class pbx_probe():
         fig.add_annotation(y = y_range[1], x = sum(x_range)/2, text = '<b>D2<b>', showarrow = False, xshift = 10)
         fig.update_layout(paper_bgcolor = 'rgb(235, 235, 235)', plot_bgcolor = 'rgb(235, 235, 235)', xaxis = dict(showgrid = False, zeroline = False), yaxis = dict(showgrid = False, zeroline = False))
         fig.show()
-        return self 
+        return 
     
     # Function: Graph Topics - Topics Heatmap
     def graph_topics_heatmap(self, view = 'browser'):
@@ -5271,8 +5300,49 @@ class pbx_probe():
         layout = go.Layout(title_text = 'Topics Heatmap', xaxis_showgrid = False, yaxis_showgrid = False, yaxis_autorange = 'reversed')
         fig    = go.Figure(data = [trace], layout = layout)
         fig.show()
-        return self
+        return
     
+    # Function:  Graph Topics - Topics Over Time
+    def graph_topics_time(self, view = 'browser'):
+        if (view == 'browser'):
+            pio.renderers.default = 'browser'
+        idx              = self.data['year'] != -1
+        abstract         = self.data['abstract'][idx]
+        year             = self.data['year'][idx]
+        topics_over_time = self.topic_model.topics_over_time(abstract, year, nr_bins = self.date_end - self.date_str)
+        topics           = topics_over_time['Topic'].unique()
+        topics           = topics[topics != -1]  
+        topics           = np.sort(topics)    
+        c                = self.color_names
+        fig              = go.Figure()
+        for i in range(0, topics.shape[0]):
+            topic_data = topics_over_time[topics_over_time['Topic'] == topics[i]]
+            fig.add_trace(go.Scatter(
+                                     x      = topic_data['Timestamp'],
+                                     y      = topic_data['Frequency'],
+                                     mode   = 'lines+markers',
+                                     name   = f'Topic {topics[i]}',
+                                     line   = dict(color = c[i], width = 2.5, shape  = 'spline'),
+                                     marker = dict(color = c[i], size = 8,    symbol = 'square')
+                                   ))
+        fig.update_layout(
+                          title        = 'Topic Trends Over Time',
+                          xaxis_title  = 'Year',
+                          yaxis_title  = 'Frequency',
+                          legend_title = 'Topics'
+                      )
+        fig.show()
+        return
+
+    # Function: Topics - Doc Words Distribution   
+    def topics_words(self, doc_id = 0):
+        abstracts    = self.data['abstract']
+        topic, token = self.topic_model.approximate_distribution(abstracts, calculate_tokens = True)
+        df           = self.topic_model.visualize_approximate_distribution(abstracts[doc_id], token[doc_id])
+        df           = df.data.T
+        df.columns   = [f"Topic {col.split('_')[0]}" if col.split('_')[0].isdigit() else col for col in df.columns]
+        return df
+
     # Function: Topics - Topics Collab   
     def topics_authors(self, topn = 15):
         self.__adjacency_matrix_aut(0)
