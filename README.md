@@ -54,20 +54,22 @@ Artificial Intelligence Capabilities:
 - c) Visualize topics by the most representative words
 - d) Visualize documents projection and clusterization by topic
 - e) Visualize topics heatmap
-- f) Find the most representative documents from each topic
-- g) Find the most representative topics according to a word
-- h) Creates **W2V Embeddings** from Abstracts
-- i) Find Documents based in words
-- j) Calculates the cosine similarity between two words
-- k) Make operations between **W2V Embeddings**
-- l) Visualize **W2V Embeddings** operations
-- m) Creates **Sentence Embeddings** from Abstracts, Titles, Authors Keywords or Keywords Plus
-- n) **Abstractive Text Summarization** using **PEGASUS** on a set of selected documents or all documents
-- o) **Abstractive Text Summarization** using **chatGPT** on a set of selected documents or all documents. Requires the user to have an **API key** (https://platform.openai.com/account/api-keys)
-- p) **Abstractive Text Summarization** using **Gemini** on a set of selected documents or all documents. Requires the user to have an **API key** (https://ai.google.dev/gemini-api/)
-- q) **Extractive Text Summarization** using **BERT** on a set of selected documents or all documents
-- r) **Ask chatGPT** to analyze the following results: EDA Report, WordCloud, N-Grams, Evolution Plot, Sankey Diagram, Authors Productivity Plot, Countries Productivity Plot, Institutions Productivity Plot, Sources Productivity Plot, Bar Plots, Citation Analysis, Collaboration Analysis, Similarity Analysis, and World Map Collaboration Analysis (consult **Example 08**). Requires the user to have an **API key** (https://platform.openai.com/account/api-keys)
-- s) **Ask Gemini** to analyze the following results: EDA Report, WordCloud, N-Grams, Evolution Plot, Sankey Diagram, Authors Productivity Plot, Countries Productivity Plot, Institutions Productivity Plot, Sources Productivity Plot, Bar Plots, Citation Analysis, Collaboration Analysis, Similarity Analysis, and World Map Collaboration Analysis (consult **Example 09**). Requires the user to have an **API key** (https://ai.google.dev/gemini-api/)
+- f) Visualize topics over time
+- g) Find the most representative documents from each topic
+- h) Find the most representative topics according to a word
+- i) Find how each word in its abstract semantically aligns with all topics in the model
+- j) Creates **W2V Embeddings** from Abstracts
+- k) Find Documents based in words
+- m) Calculates the cosine similarity between two words
+- n) Make operations between **W2V Embeddings**
+- o) Visualize **W2V Embeddings** operations
+- p) Creates **Sentence Embeddings** from Abstracts, Titles, Authors Keywords or Keywords Plus
+- q) **Abstractive Text Summarization** using **PEGASUS** on a set of selected documents or all documents
+- r) **Abstractive Text Summarization** using **chatGPT** on a set of selected documents or all documents. Requires the user to have an **API key** (https://platform.openai.com/account/api-keys)
+- s) **Abstractive Text Summarization** using **Gemini** on a set of selected documents or all documents. Requires the user to have an **API key** (https://ai.google.dev/gemini-api/)
+- t) **Extractive Text Summarization** using **BERT** on a set of selected documents or all documents
+- u) **Ask chatGPT** to analyze the following results: EDA Report, WordCloud, N-Grams, Evolution Plot, Sankey Diagram, Authors Productivity Plot, Countries Productivity Plot, Institutions Productivity Plot, Sources Productivity Plot, Bar Plots, Citation Analysis, Collaboration Analysis, Similarity Analysis, and World Map Collaboration Analysis (consult **Example 08**). Requires the user to have an **API key** (https://platform.openai.com/account/api-keys)
+- v) **Ask Gemini** to analyze the following results: EDA Report, WordCloud, N-Grams, Evolution Plot, Sankey Diagram, Authors Productivity Plot, Countries Productivity Plot, Institutions Productivity Plot, Sources Productivity Plot, Bar Plots, Citation Analysis, Collaboration Analysis, Similarity Analysis, and World Map Collaboration Analysis (consult **Example 09**). Requires the user to have an **API key** (https://ai.google.dev/gemini-api/)
 
 Correction and Manipulation Capabilities:
 - a) Filter the .bib, .csv or .txt file by Year, Sources, Bradford Law Cores, Countries, Languages and/or Abstracts (Documents with Abstracts)
