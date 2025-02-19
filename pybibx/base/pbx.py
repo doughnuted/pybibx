@@ -3572,6 +3572,7 @@ class pbx_probe():
     def top_cited_co_references(self, group = 2, topn = 10):
         co_cited_groups = []
         for refs in self.ref_id:
+            refs = list(set(refs))
             for combo in combinations(refs, group):
                 co_cited_groups.append(tuple(sorted(combo)))
         group_counts = Counter(co_cited_groups)
@@ -4230,7 +4231,7 @@ class pbx_probe():
         return
 
     # Function: Direct Network from Adjacency Matrix
-    def network_adj_dir(self, view = 'browser', min_count = 1, node_size = -1, node_labels = False, local_nodes = False):
+    def network_adj_dir(self, view = 'browser', min_count = 1, node_size = -1, font_size = 10, node_labels = False, local_nodes = False):
         if (view == 'browser' ):
             pio.renderers.default = 'browser'
         if (node_labels == True and node_size == -1):
@@ -4323,12 +4324,12 @@ class pbx_probe():
                             )
         self.fig = go.Figure(data = [n_trace, a_trace], layout = layout)
         self.fig.update_layout(yaxis = dict(scaleanchor = 'x', scaleratio = 0.5), plot_bgcolor = 'rgb(255, 255, 255)',  hoverlabel = dict(font_size = 12))
-        self.fig.update_traces(textfont_size = 10, textfont_color = 'yellow') 
+        self.fig.update_traces(textfont_size = font_size, textfont_color = 'yellow') 
         self.fig.show()
         return
 
     # Function: Network from Adjacency Matrix 
-    def network_adj(self, view = 'browser', adj_type = 'aut', min_count = 2, node_size = -1, node_labels = False, label_type = 'id', centrality = None): 
+    def network_adj(self, view = 'browser', adj_type = 'aut', min_count = 2, node_size = -1, font_size = 10, node_labels = False, label_type = 'id', centrality = None): 
         adj_ = ''
         cen_ = 'Girvan-Newman Community Algorithm'
         if (view == 'browser'):
@@ -4606,7 +4607,7 @@ class pbx_probe():
                             )
         self.fig_a = go.Figure(data = [n_trace, a_trace], layout = layout)
         self.fig_a.update_layout(yaxis = dict(scaleanchor = 'x', scaleratio = 0.5), plot_bgcolor = 'rgb(255, 255, 255)',  hoverlabel = dict(font_size = 12))
-        self.fig_a.update_traces(textfont_size = 10, textfont_color = 'blue', textposition = 'top center') 
+        self.fig_a.update_traces(textfont_size = font_size, textfont_color = 'blue', textposition = 'top center') 
         self.fig_a.show()
         if (label_type != 'id'):
             if (adj_type == 'aut'):
@@ -4622,7 +4623,7 @@ class pbx_probe():
         return
 
     # Function: Find Connected Nodes from Direct Network
-    def find_nodes_dir(self, view = 'browser', article_ids = [], ref_ids = [], node_size = -1):
+    def find_nodes_dir(self, view = 'browser', article_ids = [], ref_ids = [], node_size = -1, font_size = 10):
         if (view == 'browser' ):
             pio.renderers.default = 'browser'
         if (node_size > 0):
@@ -4741,7 +4742,7 @@ class pbx_probe():
                                           text           = text_ids,
                                           hoverinfo      = 'text',
                                           hovertext      = hover_ids,
-                                          textfont_size  = 10, 
+                                          textfont_size  = font_size, 
                                           textfont_color = 'yellow',
                                           name           = ''
                                           ))
@@ -4749,7 +4750,7 @@ class pbx_probe():
         return 
 
     # Function: Find Connected Nodes
-    def find_nodes(self, node_ids = [], node_name = [], node_size = -1, node_only = False):
+    def find_nodes(self, node_ids = [], node_name = [], node_size = -1, font_size = 10, node_only = False):
         flag = False
         if (len(node_ids) == 0 and len(node_name) > 0):
             if   (node_name[0] in self.dict_aut_id.keys()):
@@ -4829,7 +4830,7 @@ class pbx_probe():
                                       text           = text_ids,
                                       hoverinfo      = 'text',
                                       hovertext      = hover_ids,
-                                      textfont_size  = 10, 
+                                      textfont_size  = font_size, 
                                       name           = ''
                                       ))
         fig_.update_traces(textposition = 'top center') 
@@ -4837,7 +4838,7 @@ class pbx_probe():
         return
     
     # Function: Citation History Network
-    def network_hist(self, view = 'browser', min_links = 0, chain = [], path = True, node_size = 20, node_labels = True, dist = 1.2):
+    def network_hist(self, view = 'browser', min_links = 0, chain = [], path = True, node_size = 20, font_size = 10, node_labels = True, dist = 1.2):
         
         #----------------------------------------------------------------------
                      
@@ -5051,7 +5052,7 @@ class pbx_probe():
                             xaxis        = dict(showgrid = False, zeroline = False, showticklabels = True, title = 'Years', tickangle = 90, type = 'category', categoryorder = 'array', categoryarray = years),
                             yaxis        = dict(showgrid = False, zeroline = False, showticklabels = False, title = '')
                         )
-        fig.update_traces(textfont_size = 10, textfont_color = 'yellow')
+        fig.update_traces(textfont_size = font_size, textfont_color = 'yellow')
         fig.show()
         self.ask_gpt_hist                        = pd.DataFrame(citations, columns = ['Paper ID', 'Reference ID'])
         self.ask_gpt_hist['Paper ID']            = self.ask_gpt_hist['Paper ID'].astype(str)
