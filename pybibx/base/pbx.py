@@ -48,7 +48,7 @@ from scipy.signal import find_peaks
 from scipy.sparse import coo_matrix
 from scipy.sparse import csr_matrix
 from sentence_transformers import SentenceTransformer                    
-from sklearn.cluster import KMeans                          
+from sklearn.cluster import KMeans, HDBSCAN                          
 from sklearn.decomposition import TruncatedSVD as tsvd      
 from sklearn.feature_extraction.text import CountVectorizer 
 from sklearn.feature_extraction.text import TfidfVectorizer 
@@ -362,7 +362,7 @@ class pbx_probe():
         self.color_names =        [ '#6929c4', '#9f1853', '#198038', '#b28600', '#8a3800', '#1192e8', '#fa4d56', '#002d9c', 
                                     '#009d9a', '#a56eff', '#005d5d', '#570408', '#ee538b', '#012749', '#da1e28', '#f1c21b', 
                                     '#ff832b', '#198038', '#bdd9bf', '#929084', '#ffc857', '#a997df', '#e5323b', '#2e4052', 
-                                    '#e1daae', '#ff934f', '#cc2d35', '#058ed9', '#848fa2', '#2d3142', '#62a3f0', '#cc5f54', 
+                                    '#e1daae', '#ff934f', '#cc2d35', '#214d66', '#848fa2', '#2d3142', '#62a3f0', '#cc5f54', 
                                     '#e6cb60', '#523d02', '#c67ce6', '#00b524', '#4ad9bd', '#f53347', '#565c55',
                                     '#000000', '#ffff00', '#1ce6ff', '#ff34ff', '#ff4a46', '#008941', '#006fa6', '#a30059',
                                     '#ffdbe5', '#7a4900', '#0000a6', '#63ffac', '#b79762', '#004d43', '#8fb0ff', '#997d87',
@@ -3270,7 +3270,7 @@ class pbx_probe():
         return dtm
    
     # Function: Projection
-    def docs_projection(self, view = 'browser', corpus_type = 'abs', stop_words = ['en'], rmv_custom_words = [], custom_label = [], custom_projection = [], n_components = 2, n_clusters = 5, node_labels = True, node_size = 25, node_font_size = 10, tf_idf = True, embeddings = False, method = 'tsvd', model = 'allenai/scibert_scivocab_uncased', showlegend = False):
+    def docs_projection(self, view = 'browser', corpus_type = 'abs', stop_words = ['en'], rmv_custom_words = [], custom_label = [], custom_projection = [], n_components = 2, n_clusters = 5, node_labels = True, node_size = 25, node_font_size = 10, tf_idf = True, embeddings = False, method = 'tsvd', model = 'allenai/scibert_scivocab_uncased', showlegend = False, cluster_method = 'kmeans', min_size = 5, max_size = 15):
         if   (corpus_type == 'abs'):
             corpus = self.data['abstract']
             corpus = corpus.tolist()
@@ -3302,13 +3302,22 @@ class pbx_probe():
         elif (custom_projection.shape[0] == self.data.shape[0] and custom_projection.shape[1] >= 2):
             transformed = np.copy(custom_projection)
         if (len(custom_label) == 0):
-            cluster = KMeans(n_clusters = n_clusters, init = 'k-means++', n_init = 100, max_iter = 10, random_state = 1001)
-            if (tf_idf == True and embeddings == False):
-                cluster.fit(dtm)
+            if cluster_method == 'kmeans':
+                cluster = KMeans(n_clusters = n_clusters, init = 'k-means++', n_init = 100, max_iter = 10, random_state = 1001)
+                if (tf_idf == True and embeddings == False):
+                    cluster.fit(dtm)
+                else:
+                    cluster.fit(transformed)
+                labels  = cluster.labels_
+                n       = len(set(labels.tolist()))
             else:
-                cluster.fit(transformed)
-            labels  = cluster.labels_
-            n       = len(set(labels.tolist()))
+                cluster = HDBSCAN(min_cluster_size = min_size, max_cluster_size = max_size)
+                if (tf_idf == True and embeddings == False):
+                    cluster.fit(dtm)
+                else:
+                    cluster.fit(transformed)
+                labels  = cluster.labels_
+                n       = len(set(labels.tolist())) 
         elif (len(custom_label) > 0):
             labels = [item for item in custom_label]
             n      = len(set(labels))
