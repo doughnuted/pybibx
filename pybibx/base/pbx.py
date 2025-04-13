@@ -3677,7 +3677,166 @@ class pbx_probe():
                         )
         fig.show()
         return 
-    
+ 
+    # Function: Salsa (Stochastic Approximation for Local Search in Assignment Problems)
+    def salsa(self, max_iter = 150, tol = 1e-6, topn_decade = 5):
+        
+        #----------------------------------------------------------------------
+        
+        def build_hubs_authorities(A, hubs, authorities, out_degrees, in_degrees, max_iter, tol):
+            for it in range(0, max_iter):
+                old_hubs = hubs.copy()
+                old_auth = authorities.copy()
+                factor1  = np.divide(hubs, out_degrees, out = np.zeros_like(hubs), where = (out_degrees != 0))
+                new_auth = np.dot(A.T, factor1)
+                factor2  = np.divide(new_auth, in_degrees, out = np.zeros_like(new_auth), where = (in_degrees != 0))
+                new_hub  = np.dot(A, factor2)
+                sum_auth = new_auth.sum()
+                if (sum_auth > 0):
+                    new_auth = new_auth / sum_auth
+                sum_hub = new_hub.sum()
+                if (sum_hub > 0):
+                    new_hub = new_hub / sum_hub
+                hubs = new_hub
+                authorities = new_auth
+                if (np.abs(hubs - old_hubs).sum() < tol and np.abs(authorities - old_auth).sum() < tol):
+                    break
+            return hubs, authorities
+     
+        #----------------------------------------------------------------------
+        
+        node_mapping = {}  
+        node_ids     = []  
+        node_years   = []   
+        for i in range(0, len(self.ref)):
+            key = str(i)
+            if key not in node_mapping:
+                node_mapping[key] = len(node_ids)
+                node_ids.append(key)
+                node_years.append(int(self.dy[i]) if i < len(self.dy) else -1)
+        u_ref_dict = {}
+        for i, ref_str in enumerate(self.u_ref):
+            identifier          = self.u_ref_id[i]
+            key                 = str(identifier)
+            year                = self.dy_ref[i]
+            u_ref_dict[ref_str] = (key, year)
+            if key not in node_mapping:
+                node_mapping[key] = len(node_ids)
+                node_ids.append(key)
+                node_years.append(year)
+            else:
+                idx = node_mapping[key]
+                if (node_years[idx] == -1 and year != -1):
+                    node_years[idx] = year
+        N = len(node_ids)
+        A = np.zeros((N, N))
+        for i, citations in enumerate(self.ref):
+            source_key = str(i)
+            source_idx = node_mapping[source_key]
+            for citation in citations:
+                if (citation in u_ref_dict):
+                    target_key, _             = u_ref_dict[citation]
+                    target_idx                = node_mapping[target_key]
+                    A[source_idx, target_idx] = 1  
+        hubs              = np.ones(N) / N
+        authorities       = np.ones(N) / N
+        out_degrees       = A.sum(axis = 1)  
+        in_degrees        = A.sum(axis = 0)   
+        hubs, authorities = build_hubs_authorities(A, hubs, authorities, out_degrees, in_degrees, max_iter, tol)
+        year_aggregates   = {}
+        for idx in range(0, N):
+            year = node_years[idx]
+            if (year == -1):
+                continue
+            if year not in year_aggregates:
+                year_aggregates[year] = {'hub_scores': [], 'authority_scores': []}
+            year_aggregates[year]['hub_scores'].append(hubs[idx])
+            year_aggregates[year]['authority_scores'].append(authorities[idx])
+        for year in year_aggregates:
+            hs                    = year_aggregates[year]['hub_scores']
+            as_                   = year_aggregates[year]['authority_scores']
+            count                 = len(hs)
+            year_aggregates[year] = {'mean_hub': np.mean(hs), 'mean_authority': np.mean(as_), 'count': count}
+        result       = {'hubs': hubs, 'authorities': authorities, 'node_ids': node_ids, 'node_years': node_years, 'year_aggregates': year_aggregates}
+        decade_stats = {}
+        for idx, year in enumerate(result['node_years']):
+            if (year == -1):
+                continue  
+            decade = int(year // 10 * 10)
+            if decade not in decade_stats:
+                decade_stats[decade] = {'authorities': [], 'hubs': []}
+            decade_stats[decade]['authorities'].append(result['authorities'][idx])
+            decade_stats[decade]['hubs'].append(result['hubs'][idx])
+        decades          = sorted(decade_stats.keys())
+        top_by_decade_a  = {}
+        top_by_decade_h  = {}
+        topn             = topn_decade
+        for decade in decades:
+            indices        = [idx for idx, year in enumerate(result['node_years']) if year != -1 and int(year // 10 * 10) == decade]
+            sorted_indices = sorted(indices, key = lambda i: result['authorities'][i], reverse = True)
+            top_by_decade_a[decade] = [(result['node_ids'][i], result['authorities'][i]) for i in sorted_indices[:topn]]
+            sorted_indices = sorted(indices, key = lambda i: result['hubs'][i], reverse = True)
+            top_by_decade_h[decade] = [(result['node_ids'][i], result['hubs'][i]) for i in sorted_indices[:topn]]
+        return result, top_by_decade_a, top_by_decade_h
+
+    # Function: Detect Sleeping Beauties. Based on < https://doi.org/10.1007/s41109-021-00389-0 >
+    def detect_sleeping_beauties(self, topn = 10, min_count = 10): 
+        valid_years         = [int(year) for year in self.dy if year != -1]
+        min_year, max_year  = min(valid_years), max(valid_years)
+        x_range             = list(range(min_year, max_year + 1))
+        citation_trajectory = {ref: {year: 0 for year in x_range} for ref in self.u_ref_id}
+        for i, pub_year in enumerate(self.dy):
+            if (pub_year == -1):
+                continue
+            article_refs = self.ref_id[i]
+            c            = 0
+            for r in article_refs:
+                c = c + 1
+                if (r in self.u_ref_id):
+                    if (pub_year in citation_trajectory[r]):
+                        citation_trajectory[r][pub_year] =  citation_trajectory[r][pub_year] + 1
+        metrics = {}
+        for ref, counts_dict in citation_trajectory.items():
+            years = sorted(counts_dict.keys())
+            if not years:
+                continue
+            pub_year        = years[0]
+            t_values        = [year - pub_year   for year in years]
+            citations       = [counts_dict[year] for year in years]
+            total_citations = sum(citations)
+            if (total_citations < min_count):
+                metrics[ref] = {'B': 0.0, 't_a': 0, 'c0': citations[0], 'cm': max(citations), 't_m': 0}
+                continue
+            c0        = citations[0]
+            cm        = max(citations)
+            t_m_index = citations.index(cm)
+            t_m       = t_values[t_m_index]
+            if (t_m == 0):
+                metrics[ref] = {'B': 0.0, 't_a': 0, 'c0': c0, 'cm': cm, 't_m': 0}
+                continue
+            L = lambda t: ((cm - c0) / t_m) * t + c0
+            B = 0.0
+            for t, c in zip(t_values, citations):
+                if (t > t_m):
+                    break
+                B = B + (L(t) - c) / max(1, c)
+            denom    = np.sqrt((cm - c0)**2 + t_m**2)
+            d_values = []
+            for t, c in zip(t_values, citations):
+                if (t > t_m):
+                    break
+                d = abs((cm - c0)*t - t_m*c + t_m*c0) / np.maximum(1, denom) 
+                d_values.append(d)
+            if (d_values):
+                max_idx = np.argmax(d_values)
+                t_a     = t_values[max_idx]
+            else:
+                t_a     = 0
+            metrics[ref] = {'B': B, 't_a': t_a, 'c0': c0, 'cm': cm, 't_m': t_m}
+        metrics = sorted(metrics.items(), key = lambda item: item[1]['B'], reverse = True)
+        metrics = [item for item in metrics if item[1]['B'] > 0][:topn]
+        return metrics
+
     #############################################################################
         
     # Function: Authors Colaboration Adjacency Matrix   
