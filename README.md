@@ -2,7 +2,7 @@
 
 ## Citation
 
-PEREIRA, V.; BASILIO, M.P.; SANTOS, C.H.T. (2025). **PyBibX: A Python Library for Bibliometric and Scientometric Analysis Powered with Artificial Intelligence Tools**. Data Technologies and Applications. Vol. ahead-of-print No. ahead-of-print. doi: https://doi.org/10.1108/DTA-08-2023-0461
+PEREIRA, V.; BASILIO, M.P.; SANTOS, C.H.T. (2025). **PyBibX: A Python Library for Bibliometric and Scientometric Analysis Powered with Artificial Intelligence Tools**. Data Technologies and Applications. Vol. 59, Iss. 2, pp. 302-337. doi: https://doi.org/10.1108/DTA-08-2023-0461
 
 ## Introduction
 
@@ -21,32 +21,35 @@ General Capabilities:
 - d) Generates a Health Report to evaluate the quality of the .bib/.csv file
 - e) Generates an **EDA (Exploratory Data Analysis)** Report: Publications Timespan, Total Number of Countries, Total Number of Institutions, Total Number of Sources, Total Number of References, Total Number of Languages (and also the number of docs for each language), Total Number of Documents, Average Documents per Author, Average Documents per Institution, Average Documents per Source, Average Documents per Year, Total Number of Authors, Total Number of Authors Keywords, Total Number of Authors Keywords Plus, Total Single-Authored Documents, Total Multi-Authored Documents, Average Collaboration Index, Max H-Index, Total Number of Citations, Average Citations per Author, Average Citations per Institution, Average Citations per Document, Average Citations per Source
 - f) Creates an **ID (Identification)** for each Document, Authors, Sources, Institutions, Countries, Authors' Keywords, Keywords Plus and References. The IDs can be used in graphs/plots to obtain a cleaner visualization
-- g) Creates a **WordCloud** from the Abstracts, Titles, Authors Keywords or Keywords Plus
-- h) Creates a **N-Gram Bar Plot (interactive plot)** from the Abstracts, Titles, Authors Keywords or Keywords Plus
-- i) Creates a **Projection (interactive plot)** of the documents based on the Abstracts, Titles, Authors Keywords or Keywords Plus
-- j) Creates an **Evolution Plot (interactive plot)** based on Abstracts, Titles, Sources, Authors Keywords or Keywords Plus
-- k) Creates an **Evolution Plot Complement (interactive plot)** based on Abstracts, Titles, Sources, Authors Keywords or Keywords Plus
-- l) Creates a **Sankey Diagram (interactive plot)** with any combination of the following keys: Authors, Countries, Institutions, Journals, Auhors_Keywords, Keywords_Plus, and/or Languages
-- m) Creates a **XY Bar Chart (interactive plot)** that displays the count of a specified Y-key for each category defined by a specified X-key. The plot visualizes the distribution of entities such as Authors, Countries, Institutions, Journals, Authors_Keywords, Keywords_Plus, and/or Languages. For example, it can show how many Authors publications are associated with each Country
-- n) Creates a **TreeMap (interactive plot)** from the Authors, Countries, Institutions, Journals, Auhors_Keywords, or Keywords_Plus
-- o) Creates an **Authors Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each author
-- p) Creates a **Countries Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each country (each author's country)
-- q) Creates a **Institutions Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each institution (each author's institution)
-- r) Creates a **Sources Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each source (journal)
-- s) Creates a **Bar Plot (interactive plot)**  for the following statistics: Documents per Year, Citations per Year, Past Citations per Year, Lotka's Law, Sources per Documents, Sources per Citations, Authors per Documents, Authors per Citations, Authors per H-Index, Bradford's Law (Core Sources 1, 2 or 3), Institutions per Documents, Institutions per Citations, Countries per Documents, Countries per Citations, Language per Documents, Keywords Plus per Documents and Authors' Keywords per Documents
-- t) Creates a **Top Reference Plot (interactive plot)** to visualize the top cited References
-- u) Creates a **Citation Trajectory Plot (interactive plot)**  that shows the yearly citation counts for each selected Reference
-- v) Creates a **Citation Matrix** that shows for each Reference, which citing articles (with their publication years) mentioned that Reference, the Unique Reference ID, and the Reference's publication year
-- w) Creates a **RPYS-Reference Publication Year Spectroscopy (interactive plot)** to visualize citation patterns over the years. Revealing the peaks in reference publication years (trough Gaussian Filters) that might indicate influential works or shifts in research trends
+- g) Creates an **Authors's Metrics Table** with h-index, e-index, g-index and m-index
+- h) Creates a **WordCloud** from the Abstracts, Titles, Authors Keywords or Keywords Plus
+- i) Creates a **N-Gram Bar Plot (interactive plot)** from the Abstracts, Titles, Authors Keywords or Keywords Plus
+- j) Creates a **Projection (interactive plot)** of the documents based on the Abstracts, Titles, Authors Keywords or Keywords Plus
+- k) Creates an **Evolution Plot (interactive plot)** based on Abstracts, Titles, Sources, Authors Keywords or Keywords Plus
+- l) Creates an **Evolution Plot Complement (interactive plot)** based on Abstracts, Titles, Sources, Authors Keywords or Keywords Plus
+- m) Creates a **Sankey Diagram (interactive plot)** with any combination of the following keys: Authors, Countries, Institutions, Journals, Auhors_Keywords, Keywords_Plus, and/or Languages
+- n) Creates a **XY Bar Chart (interactive plot)** that displays the count of a specified Y-key for each category defined by a specified X-key. The plot visualizes the distribution of entities such as Authors, Countries, Institutions, Journals, Authors_Keywords, Keywords_Plus, and/or Languages. For example, it can show how many Authors publications are associated with each Country
+- o) Creates a **TreeMap (interactive plot)** from the Authors, Countries, Institutions, Journals, Auhors_Keywords, or Keywords_Plus
+- p) Creates an **Authors Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each author
+- q) Creates a **Countries Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each country (each author's country)
+- r) Creates a **Institutions Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each institution (each author's institution)
+- s) Creates a **Sources Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each source (journal)
+- t) Creates a **Bar Plot (interactive plot)**  for the following statistics: Documents per Year, Citations per Year, Past Citations per Year, Lotka's Law, Sources per Documents, Sources per Citations, Authors per Documents, Authors per Citations, Authors per H-Index, Bradford's Law (Core Sources 1, 2 or 3), Institutions per Documents, Institutions per Citations, Countries per Documents, Countries per Citations, Language per Documents, Keywords Plus per Documents and Authors' Keywords per Documents
+- u) Creates a **Top Reference Plot (interactive plot)** to visualize the top cited References
+- v) Creates a **Citation Trajectory Plot (interactive plot)**  that shows the yearly citation counts for each selected Reference
+- w) Creates a **Citation Matrix** that shows for each Reference, which citing articles (with their publication years) mentioned that Reference, the Unique Reference ID, and the Reference's publication year
+- x) Creates a **RPYS-Reference Publication Year Spectroscopy (interactive plot)** to visualize citation patterns over the years. Revealing the peaks in reference publication years (trough Gaussian Filters) that might indicate influential works or shifts in research trends
 
 Network Capabilities:
 - a) Creates a **Top Reference Set Matrix**, which, for a given group size n, identifies and returns the most frequently co-cited Reference groups of size n
 - b) Creates a **Reference Co-Citation Network (interactive plot)** that visually displays the top n References that are most frequently cited together with a target Reference
 - c) **Collaboration Plot** between Authors, Countries, Institutions, Authors' Keywords or Keywords Plus
-- d) **Citation Analysis (interactive plot)** between Documents (Blue Nodes) and Citations (Red Nodes). Documents and Citations can be highlighted for better visualization
-- e) **Collaboration Analysis (interactive plot)** between Authors, Countries, Institutions or **Adjacency Analysis (interactive plot)** between Authors' Keywords or Keywords Plus. Collaboration and Adjacency can be highlighted for better visualization
-- f) **Similarity Analysis (interactive plot)** can be performed using coupling or cocitation methods
-- g) **World Map Collaboration Analysis (interactive plot)** between Countries in a Map
+- d) **Hubs & Authorities** Computes Hub and Authority scores for papers in a citation network, and can also find the top-ranked nodes per decade.
+- e) **Sleeping Beauties** Identifies Sleeping Beauties, papers that were uncited for a long time but later received sudden attention.
+- f) **Citation Analysis (interactive plot)** between Documents (Blue Nodes) and Citations (Red Nodes). Documents and Citations can be highlighted for better visualization
+- g) **Collaboration Analysis (interactive plot)** between Authors, Countries, Institutions or **Adjacency Analysis (interactive plot)** between Authors' Keywords or Keywords Plus. Collaboration and Adjacency can be highlighted for better visualization
+- h) **Similarity Analysis (interactive plot)** can be performed using coupling or cocitation methods
+- i) **World Map Collaboration Analysis (interactive plot)** between Countries in a Map
 
 Artificial Intelligence Capabilities:
 - a) **Topic Modelling** using BERTopic to cluster documents by topic
@@ -103,6 +106,13 @@ This section indicates the libraries that inspired pybibx
   a) Github: https://github.com/dmmiller612/bert-extractive-summarizer
   <!-- -->
   b) Paper: DEREK, M. (2019). Leveraging BERT for Extractive Text Summarization on Lectures. arXiv. doi: https://doi.org/10.48550/arXiv.1906.04165
+  
+- **SciBERT (https://huggingface.co/allenai/scibert_scivocab_uncased)**:
+  <!-- -->
+  a) Github: https://github.com/allenai/scibert
+  <!-- -->
+  b) Paper: BELTAGY, I.;, LO, K.; COHAN, A. (2019). SCIBERT: A Pretrained Language Model for Scientific Text. arXiv. doi: 
+https://doi.org/10.48550/arXiv.1903.10676
 
 - **BERTopic (https://maartengr.github.io/BERTopic/index.html)**:
   <!-- -->
