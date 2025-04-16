@@ -8,7 +8,7 @@
 # Citation:
 # PEREIRA, V.; BASILIO, M.P.; SANTOS, C.H.T. (2025). PyBibX: A Python Library for Bibliometric and
 # Scientometric Analysis Powered with Artificial Intelligence Tools. Data Technologies and Applications.
-# Vol. ahead-of-print No. ahead-of-print. doi: https://doi.org/10.1108/DTA-08-2023-0461
+# Vol. 59, Iss. 2, pp. 302-337. doi: https://doi.org/10.1108/DTA-08-2023-0461
 
 ############################################################################
 
@@ -3832,10 +3832,38 @@ class pbx_probe():
                 t_a     = t_values[max_idx]
             else:
                 t_a     = 0
-            metrics[ref] = {'B': B, 't_a': t_a, 'c0': c0, 'cm': cm, 't_m': t_m}
+            metrics[ref] = {'B': B, 'SBI': B / denom if denom > 0 else 0.0, 't_a': t_a, 'c0': c0, 'cm': cm, 't_m': t_m}
         metrics = sorted(metrics.items(), key = lambda item: item[1]['B'], reverse = True)
         metrics = [item for item in metrics if item[1]['B'] > 0][:topn]
+        metrics = pd.DataFrame([{ 'ref': ref, **vals } for ref, vals in metrics])
         return metrics
+
+    # Function: Detect Princes. Based on < https://doi.org/10.1007/s41109-021-00389-0 >
+    def detect_princes(self, metrics):
+        results = []
+        for _, row in metrics.iterrows():
+            sb_id          = row['ref']
+            citing_indices = [idx for idx, refs in enumerate(self.ref_id) if sb_id in refs]
+            sb_citers      = []
+            for idx in citing_indices:
+                pub_year = self.dy[idx]
+                if (pub_year == -1):
+                    continue
+                sb_citers.append({'id': self.table_id_doc['ID'][idx], 'pub_year': int(pub_year), 'references': self.ref_id[idx]})
+            candidates         = [ p for p in sb_citers ] 
+            co_citation_counts = {}
+            for candidate in candidates:
+                cid                     = candidate['id']
+                count                   = sum(1 for p in sb_citers if cid in p.get('references', []))
+                co_citation_counts[cid] = count
+            if (co_citation_counts):
+                prince_id = max(co_citation_counts, key=co_citation_counts.get)
+                prince    = next(p for p in candidates if p['id'] == prince_id)
+                results.append({ 'SB_id': sb_id, 'PR_id': prince_id, 'PR_pub_year': prince['pub_year'], 'co_citation_count': co_citation_counts[prince_id]})
+            else:
+                results.append({'SB_id': sb_id, 'PR_id': None, 'PR_pub_year': None, 'co_citation_count': 0})
+        results_df = pd.DataFrame(results)
+        return results_df
 
     #############################################################################
         
