@@ -46,10 +46,11 @@ Network Capabilities:
 - c) **Collaboration Plot** between Authors, Countries, Institutions, Authors' Keywords or Keywords Plus
 - d) **Hubs & Authorities** Computes Hub and Authority scores for papers in a citation network, and can also find the top-ranked nodes per decade.
 - e) **Sleeping Beauties** Identifies Sleeping Beauties, papers that were uncited for a long time but later received sudden attention.
-- f) **Citation Analysis (interactive plot)** between Documents (Blue Nodes) and Citations (Red Nodes). Documents and Citations can be highlighted for better visualization
-- g) **Collaboration Analysis (interactive plot)** between Authors, Countries, Institutions or **Adjacency Analysis (interactive plot)** between Authors' Keywords or Keywords Plus. Collaboration and Adjacency can be highlighted for better visualization
-- h) **Similarity Analysis (interactive plot)** can be performed using coupling or cocitation methods
-- i) **World Map Collaboration Analysis (interactive plot)** between Countries in a Map
+- f) **Princes** Identifies the Princes of the Sleeping Beauties.
+- g) **Citation Analysis (interactive plot)** between Documents (Blue Nodes) and Citations (Red Nodes). Documents and Citations can be highlighted for better visualization
+- h) **Collaboration Analysis (interactive plot)** between Authors, Countries, Institutions or **Adjacency Analysis (interactive plot)** between Authors' Keywords or Keywords Plus. Collaboration and Adjacency can be highlighted for better visualization
+- i) **Similarity Analysis (interactive plot)** can be performed using coupling or cocitation methods
+- j) **World Map Collaboration Analysis (interactive plot)** between Countries in a Map
 
 Artificial Intelligence Capabilities:
 - a) **Topic Modelling** using BERTopic to cluster documents by topic
