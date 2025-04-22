@@ -44,9 +44,9 @@ Network Capabilities:
 - a) Creates a **Top Reference Set Matrix**, which, for a given group size n, identifies and returns the most frequently co-cited Reference groups of size n
 - b) Creates a **Reference Co-Citation Network (interactive plot)** that visually displays the top n References that are most frequently cited together with a target Reference
 - c) **Collaboration Plot** between Authors, Countries, Institutions, Authors' Keywords or Keywords Plus
-- d) **Hubs & Authorities** Computes Hub and Authority scores for papers in a citation network, and can also find the top-ranked nodes per decade.
-- e) **Sleeping Beauties** Identifies Sleeping Beauties, papers that were uncited for a long time but later received sudden attention.
-- f) **Princes** Identifies the Princes of the Sleeping Beauties.
+- d) Computes **Hubs & Authorities** scores for papers in a citation network, and can also find the top-ranked nodes per decade.
+- e) Identifies **Sleeping Beauties** papers that were uncited for a long time but later received sudden attention.
+- f) Identifies the **Princes** Princes of the **Sleeping Beauties**.
 - g) **Citation Analysis (interactive plot)** between Documents (Blue Nodes) and Citations (Red Nodes). Documents and Citations can be highlighted for better visualization
 - h) **Collaboration Analysis (interactive plot)** between Authors, Countries, Institutions or **Adjacency Analysis (interactive plot)** between Authors' Keywords or Keywords Plus. Collaboration and Adjacency can be highlighted for better visualization
 - i) **Similarity Analysis (interactive plot)** can be performed using coupling or cocitation methods
