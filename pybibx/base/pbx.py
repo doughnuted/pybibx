@@ -1775,11 +1775,11 @@ class pbx_probe():
     # Function: Wordcloud 
     def word_cloud_plot(self, entry = 'kwp', size_x = 10, size_y = 10, wordsn = 500, rmv_custom_words = []):
         if  (entry == 'kwp'):
-            kid_    = [item for sublist in bibfile.kid  for item in sublist]
+            kid_    = [item for sublist in self.kid  for item in sublist]
             corpora = ' '.join(kid_)
             corpora = corpora.lower()
         elif (entry == 'kwa'):
-            auk_    = [item for sublist in bibfile.kid  for item in sublist]
+            auk_    = [item for sublist in self.kid  for item in sublist]
             corpora = ' '.join(auk_)
             corpora = corpora.lower()
         elif (entry == 'abs'):
