@@ -785,7 +785,7 @@ class pbx_probe():
         matches = {k: v for k, v in matches.items() if v}
         return matches
     
-        # Function: Merge Database
+    # Function: Merge Database
     def merge_database(self, file_bib, db, del_duplicated):
         old_vb   = [item for item in self.vb]
         old_size = self.data.shape[0]
@@ -1393,6 +1393,9 @@ class pbx_probe():
         data.fillna('UNKNOWN', inplace = True)
         data['keywords']        = data['keywords'].apply(lambda x: x.replace(',',';'))
         data['author_keywords'] = data['author_keywords'].apply(lambda x: x.replace(',',';'))
+        if db == 'wos':
+            if 'affiliation_' not in data.columns:
+                data['affiliation_'] = 'UNKNOWN'
         if (db == 'wos'):
             idx     = data[data['year'] == 'UNKNOWN'].index.values
             idx_val = [data.loc[i, 'da'][:4] for i in idx]
