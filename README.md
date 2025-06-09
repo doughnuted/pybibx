@@ -29,16 +29,17 @@ General Capabilities:
 - l) Creates an **Evolution Plot Complement (interactive plot)** based on Abstracts, Titles, Sources, Authors Keywords or Keywords Plus
 - m) Creates a **Sankey Diagram (interactive plot)** with any combination of the following keys: Authors, Countries, Institutions, Journals, Auhors_Keywords, Keywords_Plus, and/or Languages
 - n) Creates a **XY Bar Chart (interactive plot)** that displays the count of a specified Y-key for each category defined by a specified X-key. The plot visualizes the distribution of entities such as Authors, Countries, Institutions, Journals, Authors_Keywords, Keywords_Plus, and/or Languages. For example, it can show how many Authors publications are associated with each Country
-- o) Creates a **TreeMap (interactive plot)** from the Authors, Countries, Institutions, Journals, Auhors_Keywords, or Keywords_Plus
-- p) Creates an **Authors Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each author
-- q) Creates a **Countries Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each country (each author's country)
-- r) Creates a **Institutions Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each institution (each author's institution)
-- s) Creates a **Sources Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each source (journal)
-- t) Creates a **Bar Plot (interactive plot)**  for the following statistics: Documents per Year, Citations per Year, Past Citations per Year, Lotka's Law, Sources per Documents, Sources per Citations, Authors per Documents, Authors per Citations, Authors per H-Index, Bradford's Law (Core Sources 1, 2 or 3), Institutions per Documents, Institutions per Citations, Countries per Documents, Countries per Citations, Language per Documents, Keywords Plus per Documents and Authors' Keywords per Documents
-- u) Creates a **Top Reference Plot (interactive plot)** to visualize the top cited References
-- v) Creates a **Citation Trajectory Plot (interactive plot)**  that shows the yearly citation counts for each selected Reference
-- w) Creates a **Citation Matrix** that shows for each Reference, which citing articles (with their publication years) mentioned that Reference, the Unique Reference ID, and the Reference's publication year
-- x) Creates a **RPYS-Reference Publication Year Spectroscopy (interactive plot)** to visualize citation patterns over the years. Revealing the peaks in reference publication years (trough Gaussian Filters) that might indicate influential works or shifts in research trends
+- o) Creates a **XY Heatmap (interactive plot)** that displays the count and papers' ID of a specified Y-key for each category defined by a specified X-key. The plot visualizes the distribution of entities such as Authors, Countries, Institutions, Journals, Authors_Keywords, Keywords_Plus, and/or Languages. For example, it can show how many Authors publications are associated with each Authors_Keywords and the papers associated to them.
+- p) Creates a **TreeMap (interactive plot)** from the Authors, Countries, Institutions, Journals, Auhors_Keywords, or Keywords_Plus
+- q) Creates an **Authors Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each author
+- r) Creates a **Countries Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each country (each author's country)
+- s) Creates a **Institutions Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each institution (each author's institution)
+- t) Creates a **Sources Productivity Plot (interactive plot)** It informs for each year the documents (IDs) published for each source (journal)
+- u) Creates a **Bar Plot (interactive plot)**  for the following statistics: Documents per Year, Citations per Year, Past Citations per Year, Lotka's Law, Sources per Documents, Sources per Citations, Authors per Documents, Authors per Citations, Authors per H-Index, Bradford's Law (Core Sources 1, 2 or 3), Institutions per Documents, Institutions per Citations, Countries per Documents, Countries per Citations, Language per Documents, Keywords Plus per Documents and Authors' Keywords per Documents
+- v) Creates a **Top Reference Plot (interactive plot)** to visualize the top cited References
+- w) Creates a **Citation Trajectory Plot (interactive plot)**  that shows the yearly citation counts for each selected Reference
+- x) Creates a **Citation Matrix** that shows for each Reference, which citing articles (with their publication years) mentioned that Reference, the Unique Reference ID, and the Reference's publication year
+- y) Creates a **RPYS-Reference Publication Year Spectroscopy (interactive plot)** to visualize citation patterns over the years. Revealing the peaks in reference publication years (trough Gaussian Filters) that might indicate influential works or shifts in research trends
 
 Network Capabilities:
 - a) Creates a **Top Reference Set Matrix**, which, for a given group size n, identifies and returns the most frequently co-cited Reference groups of size n
@@ -46,7 +47,7 @@ Network Capabilities:
 - c) **Collaboration Plot** between Authors, Countries, Institutions, Authors' Keywords or Keywords Plus
 - d) Computes **Hubs & Authorities** scores for papers in a citation network, and can also find the top-ranked nodes per decade.
 - e) Identifies **Sleeping Beauties** papers that were uncited for a long time but later received sudden attention.
-- f) Identifies the **Princes** Princes of the **Sleeping Beauties**.
+- f) Identifies the **Princes** of the **Sleeping Beauties**.
 - g) **Citation Analysis (interactive plot)** between Documents (Blue Nodes) and Citations (Red Nodes). Documents and Citations can be highlighted for better visualization
 - h) **Collaboration Analysis (interactive plot)** between Authors, Countries, Institutions or **Adjacency Analysis (interactive plot)** between Authors' Keywords or Keywords Plus. Collaboration and Adjacency can be highlighted for better visualization
 - i) **Similarity Analysis (interactive plot)** can be performed using coupling or cocitation methods
