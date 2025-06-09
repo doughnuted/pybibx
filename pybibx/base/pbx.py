@@ -36,6 +36,7 @@ from . import stws
 from bertopic import BERTopic                               
 from collections import Counter, defaultdict
 from difflib import SequenceMatcher
+#from keybert import KeyBERT 
 from gensim.models import FastText
 from itertools import combinations
 from matplotlib import pyplot as plt                       
@@ -57,7 +58,7 @@ from summarizer import Summarizer
 from transformers import PegasusForConditionalGeneration
 from transformers import PegasusTokenizer
 from umap import UMAP  
-from wordcloud import WordCloud                           
+from wordcloud import WordCloud                          
 
 ############################################################################
 
@@ -522,6 +523,7 @@ class pbx_probe():
         self.corr_a_inst_map       = -1
         self.frst_a_inst_map       = -1  
         self.top_y_x               = -1
+        self.heat_y_x              = -1
         self.top_refs              = -1
         self.rpys_pk               = -1
         self.rpys_rs               = -1
@@ -912,6 +914,16 @@ class pbx_probe():
                 target = self.data.loc[i, 'references'].lower()
                 if (name.lower() in target):
                     self.data.loc[i, 'references'] = target.replace(name.lower(), replace_for)
+        self.__make_bib(verbose = False)
+        return
+
+    # Function: Replace Keyword Plus
+    def replace_keyword_plus(self, replace_all, edit = True):
+        if edit:
+            result_strings        = ['; '.join([phrase for (phrase, _) in sub]) for sub in replace_all]
+            self.data['keywords'] = result_strings 
+        else:
+            self.data['keywords'] = replace_all
         self.__make_bib(verbose = False)
         return
     
@@ -2893,6 +2905,98 @@ class pbx_probe():
             xaxis       = dict( categoryorder = 'total descending',  tickangle = x_angle )
             )
         fig.show()
+        return
+
+    # Function: Heatmap Plot Y per X
+    def plot_heatmap_y_per_x(self, x, y, topn_x = 5, topn_y = 5, rmv_unknowns = True, view = "browser"):
+        if view == "browser":
+            pio.renderers.default = "browser"
+        sk_data = pd.DataFrame({ 'aut' : self.aut,
+                                 'cout': self.ctr,
+                                 'inst': self.uni,
+                                 'jou' : self.jou,
+                                 'kwa' : self.auk,
+                                 'kwp' : self.kid,
+                                 'lan' : self.lan})
+        sk_data     = sk_data[[x, y]].copy()
+        pair_to_ids = defaultdict(list)
+        for doc_id, row in sk_data.iterrows():
+            xs = row[x] if isinstance(row[x], (list, tuple, set)) else [row[x]]
+            ys = row[y] if isinstance(row[y], (list, tuple, set)) else [row[y]]
+            for xi in xs:
+                for yi in ys:
+                    if rmv_unknowns and (str(xi).lower() == "unknown" or str(yi).lower() == "unknown"):
+                        continue
+                    pair_to_ids[(xi, yi)].append(doc_id)
+        x_counter = Counter()
+        for (xi, yi), id_list in pair_to_ids.items():
+            x_counter[xi] += len(id_list)
+        top_x     = [xi for xi, _ in x_counter.most_common(topn_x)]
+        y_counter = Counter()
+        for (xi, yi), id_list in pair_to_ids.items():
+            y_counter[yi] += len(id_list)
+        top_y         = [yi for yi, _ in y_counter.most_common(topn_y)]
+        matrix_ids    = []
+        matrix_counts = []
+        for yi in top_y:
+            row_ids    = []
+            row_counts = []
+            for xi in top_x:
+                ids = pair_to_ids.get((xi, yi), [])
+                row_ids.append(ids.copy())         
+                row_counts.append(len(ids))        
+            matrix_ids.append(row_ids)
+            matrix_counts.append(row_counts)
+        matrix_ids    = [[list(set(cell)) if isinstance(cell,list) else cell for cell in row] for row in matrix_ids]
+        matrix_counts = [[len(cell) if isinstance(cell, list) else 0 for cell in row] for row in matrix_ids]
+        self.heat_y_x = pd.DataFrame(matrix_ids, index = top_y, columns = top_x)
+        hover_text    = []
+        for row in matrix_ids:
+            row_text = []
+            for cell in row:
+                if cell:
+                    text = "<br>".join([f"ID: {doc_id}" for doc_id in sorted(cell)])
+                else:
+                    text = ""
+                row_text.append(text)
+            hover_text.append(row_text)
+            fig = go.Figure(go.Heatmap(
+                                        z             = matrix_counts,
+                                        x             = top_x,         
+                                        y             = top_y,
+                                        text          = matrix_counts, 
+                                        texttemplate  = "%{text}",     
+                                        textfont      = dict(color = "black", size = 12),
+                                        hovertext     = hover_text,
+                                        hovertemplate = "%{hovertext}<extra></extra>",
+                                        colorscale    = "Pinkyl",
+                                        showscale     = False,
+                                        xgap          = 1,
+                                        ygap          = 1
+                                    ))
+            fig.update_layout(
+                title = dict(
+                              text    = f"Distribution of <b>{y}</b> per <b>{x}</b>",
+                              x       = 0.5,
+                              xanchor = "center",
+                              font    = dict(size = 20)
+                            ),
+                xaxis = dict(
+                              title     = str(x).upper(),
+                              tickangle = -45,
+                              tickfont  = dict(size=12),
+                              side      = "bottom",
+                              type      = "category"
+                            ),
+                yaxis = dict(
+                              title    = str(y).upper(),
+                              tickfont = dict(size=12),
+                              autorange = "reversed",
+                              type      = "category"
+                            ),
+                margin = dict(t = 80, b = 80, l = 100, r = 20)
+            )
+            fig.show()
         return
 
     # Function: Sankey Diagram
@@ -5344,7 +5448,17 @@ class pbx_probe():
         self.topic_info         = self.topic_model.get_topic_info()
         print(self.topic_info)
         return  
-
+  
+    # Function: Topics - Load
+    def topics_load_file(self,  saved_file = 'my_topic_model'):
+        self.topic_model  = BERTopic.load(saved_file)
+        self.topic_corpus = self.clear_text(self.data['abstract'], stop_words = [], lowercase = True, rmv_accents = True, rmv_special_chars = True, rmv_numbers = True, rmv_custom_words = [], verbose = False)
+        self.topics       = self.topic_model.topics_               
+        self.probs        = self.topic_model.probabilities_ 
+        self.topic_info   = self.topic_model.get_topic_info()
+        print(self.topic_info)
+        return
+    
     # Function: Topics - Main Representatives
     def topics_representatives(self):
         docs        = [[] for _ in range(0, self.topic_info.shape[0])]
@@ -5689,6 +5803,49 @@ class pbx_probe():
                         )
         fig.show()
         return
+
+############################################################################
+
+    # Function: Extract Keywords KeyBert or Extract Keywords KeyBert + TextRank
+#    def extract_keywords_keybert(self, text, top_n = 10, candidate_factor = 2, stop_words = 'en', rmv_custom_words = [], diversity = True, text_rank = False, ngram = 1, model = 'allenai/scibert_scivocab_uncased'):
+#        if not isinstance(text, (list, pd.Series)):
+#            corpus = [text]
+#        else:
+#            corpus = text.tolist()
+#        corpus   = self.clear_text(corpus, 
+#                                   stop_words        = stop_words, 
+#                                   lowercase         = True, 
+#                                   rmv_accents       = False, 
+#                                   rmv_special_chars = False, 
+#                                   rmv_numbers       = False,
+#                                   rmv_custom_words  = rmv_custom_words)
+#        kw_model  = KeyBERT(model)
+#        keywords  = []
+#        if text_rank == False:
+#            keywords = kw_model.extract_keywords(corpus, keyphrase_ngram_range = (1, ngram), use_maxsum = diversity, top_n = top_n)
+#        else:
+#            embedds  = SentenceTransformer(model)
+#            corpus   = kw_model.extract_keywords(corpus, keyphrase_ngram_range = (1, ngram), use_maxsum = diversity, top_n = top_n * candidate_factor)
+#            if isinstance(text, (list, pd.Series)):
+#                for c in corpus:
+#                    phrases        = [phrase for phrase, _ in c]
+#                    embeddings     = embedds.encode(phrases)
+#                    sim_matrix     = cosine_similarity(embeddings)
+#                    np.fill_diagonal(sim_matrix, 0)
+#                    graph          = nx.from_numpy_array(sim_matrix)
+#                    scores         = nx.pagerank(graph)
+#                    ranked_phrases = sorted(((phrases[i], scores[i]) for i in range(0, len(phrases))), reverse = True)
+#                    keywords.append(ranked_phrases[:top_n])
+#            else:
+#                phrases        = [phrase for phrase, _ in corpus]
+#                embeddings     = embedds.encode(phrases)
+#                sim_matrix     = cosine_similarity(embeddings)
+#                np.fill_diagonal(sim_matrix, 0)
+#                graph          = nx.from_numpy_array(sim_matrix)
+#                scores         = nx.pagerank(graph)
+#                ranked_phrases = sorted(((phrases[i], scores[i]) for i in range(0, len(phrases))), reverse = True)
+#                keywords.append(ranked_phrases[:top_n])
+#        return keywords
  
 ############################################################################
 
