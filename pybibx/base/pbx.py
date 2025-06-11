@@ -2959,7 +2959,7 @@ class pbx_probe():
                 else:
                     text = ""
                 row_text.append(text)
-        hover_text.append(row_text)
+            hover_text.append(row_text)
         fig = go.Figure(go.Heatmap(
                                     z             = matrix_counts,
                                     x             = top_x,         
