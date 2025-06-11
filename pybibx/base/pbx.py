@@ -2959,44 +2959,44 @@ class pbx_probe():
                 else:
                     text = ""
                 row_text.append(text)
-            hover_text.append(row_text)
-            fig = go.Figure(go.Heatmap(
-                                        z             = matrix_counts,
-                                        x             = top_x,         
-                                        y             = top_y,
-                                        text          = matrix_counts, 
-                                        texttemplate  = "%{text}",     
-                                        textfont      = dict(color = "black", size = 12),
-                                        hovertext     = hover_text,
-                                        hovertemplate = "%{hovertext}<extra></extra>",
-                                        colorscale    = "Pinkyl",
-                                        showscale     = False,
-                                        xgap          = 1,
-                                        ygap          = 1
-                                    ))
-            fig.update_layout(
-                title = dict(
-                              text    = f"Distribution of <b>{y}</b> per <b>{x}</b>",
-                              x       = 0.5,
-                              xanchor = "center",
-                              font    = dict(size = 20)
-                            ),
-                xaxis = dict(
-                              title     = str(x).upper(),
-                              tickangle = -45,
-                              tickfont  = dict(size=12),
-                              side      = "bottom",
-                              type      = "category"
-                            ),
-                yaxis = dict(
-                              title    = str(y).upper(),
-                              tickfont = dict(size=12),
-                              autorange = "reversed",
-                              type      = "category"
-                            ),
-                margin = dict(t = 80, b = 80, l = 100, r = 20)
-            )
-            fig.show()
+        hover_text.append(row_text)
+        fig = go.Figure(go.Heatmap(
+                                    z             = matrix_counts,
+                                    x             = top_x,         
+                                    y             = top_y,
+                                    text          = matrix_counts, 
+                                    texttemplate  = "%{text}",     
+                                    textfont      = dict(color = "black", size = 12),
+                                    hovertext     = hover_text,
+                                    hovertemplate = "%{hovertext}<extra></extra>",
+                                    colorscale    = "Pinkyl",
+                                    showscale     = False,
+                                    xgap          = 1,
+                                    ygap          = 1
+                                ))
+        fig.update_layout(
+            title = dict(
+                          text    = f"Distribution of <b>{y}</b> per <b>{x}</b>",
+                          x       = 0.5,
+                          xanchor = "center",
+                          font    = dict(size = 20)
+                        ),
+            xaxis = dict(
+                          title     = str(x).upper(),
+                          tickangle = -45,
+                          tickfont  = dict(size=12),
+                          side      = "bottom",
+                          type      = "category"
+                        ),
+            yaxis = dict(
+                          title    = str(y).upper(),
+                          tickfont = dict(size=12),
+                          autorange = "reversed",
+                          type      = "category"
+                        ),
+            margin = dict(t = 80, b = 80, l = 100, r = 20)
+        )
+        fig.show()
         return
 
     # Function: Sankey Diagram
