@@ -90,6 +90,40 @@ def build_edges(idx_list):
 
 @njit
 def build_edges_ref(ref_idx_list):
+    """
+    Builds edges for a reference graph.
+
+    This function is JIT-compiled with Numba for performance. It's typically
+    used to create edges representing citations, where each row in `ref_idx_list`
+    is a document and the values are the documents it references.
+
+    Args:
+        ref_idx_list (numba.typed.List): A list of lists (or Numba typed list of arrays)
+                                         where `ref_idx_list[i]` contains the indices
+                                         of documents referenced by document `i`.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: A tuple containing two NumPy arrays:
+                                       - row_indices: Source nodes of the edges.
+                                       - col_indices: Target nodes of the edges.
+    """
+    """
+    Builds edges for a graph from a list of item indices.
+
+    This function is JIT-compiled with Numba for performance.
+
+    Args:
+        idx_list (numba.typed.List): A list where each element is a NumPy array
+                                     of integers representing a group of items.
+                                     Edges are created between all pairs of items
+                                     within each group.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: A tuple containing two NumPy arrays:
+                                       - rows: The row indices for the COO matrix.
+                                       - cols: The column indices for the COO matrix.
+                                       These represent the edges of the graph.
+    """
     count = 0
     for row in range(0, len(ref_idx_list)):
         count = count + len(ref_idx_list[row])
@@ -108,6 +142,112 @@ def build_edges_ref(ref_idx_list):
 # pbx Class
 class pbx_probe:
     def __init__(self, file_bib, db="scopus", del_duplicated=True):
+        """
+        Initializes the pbx_probe class for bibliometric analysis.
+
+        This class reads bibliographic data from a file, processes it,
+        and prepares it for various scientometric analyses and visualizations.
+
+        Args:
+            file_bib (str): Path to the bibliographic file.
+                            Supported formats depend on the 'db' parameter.
+                            - For 'scopus': typically a .csv file exported from Scopus.
+                            - For 'wos': typically a .bib file exported from Web of Science.
+                            - For 'pubmed': typically a .nbib file from PubMed.
+            db (str, optional): The database source of the bibliographic file.
+                                Defaults to "scopus".
+                                Supported values: "scopus", "wos", "pubmed".
+                                This determines how the file is parsed.
+            del_duplicated (bool, optional): Whether to remove duplicated entries
+                                             based on DOI and title. Defaults to True.
+
+        Attributes:
+            database (str): The database source (e.g., "scopus", "wos").
+            data (pd.DataFrame): DataFrame holding the processed bibliographic data.
+            entries (list): List of column names from the original data.
+            institution_names (list): Predefined list of common institution name parts.
+            inst_priority (dict): Dictionary defining priority for institution name parts.
+            language_names (dict): Mapping of language codes to full names.
+            country_names (list): List of country names.
+            country_alpha_2 (list): List of 2-letter country codes.
+            country_alpha_3 (list): List of 3-letter country codes.
+            country_numeric (list): List of numeric country codes.
+            country_lat_long (list): List of (latitude, longitude) tuples for countries.
+            color_names (list): Predefined list of hex color codes for plotting.
+            dy (pd.Series): Series containing the publication year of each document as float.
+            date_str (int): Minimum publication year in the dataset.
+            date_end (int): Maximum publication year in the dataset.
+            doc_types (pd.Series): Value counts of document types.
+            av_d_year (float): Average number of documents per year.
+            citation (list): List of citation counts for each document.
+            av_c_doc (float): Average citations per document.
+            ref (list): List of lists, where each inner list contains references for a document.
+            u_ref (list): List of unique references.
+            aut (list): List of lists, where each inner list contains authors for a document.
+            u_aut (list): List of unique authors.
+            aut_h (list): H-index for each author.
+            aut_g (list): G-index for each author.
+            aut_e (list): E-index for each author.
+            aut_docs (list): Number of documents per author.
+            aut_single (int): Number of single-authored documents.
+            aut_multi (list): List of document counts for multi-authored documents.
+            aut_cit (list): Citation counts for each unique author.
+            author_to_papers (defaultdict): Mapping of authors to the indices of their papers.
+            kid (list): List of lists, where each inner list contains keywords plus for a document.
+            u_kid (list): List of unique keywords plus.
+            kid_count (list): Counts for each unique keyword plus.
+            auk (list): List of lists, where each inner list contains author keywords for a document.
+            u_auk (list): List of unique author keywords.
+            auk_count (list): Counts for each unique author keyword.
+            jou (list): List of lists, where each inner list contains journal abbreviations for a document.
+            u_jou (list): List of unique journal abbreviations.
+            jou_count (list): Counts for each unique journal abbreviation.
+            jou_cit (list): Citation counts for each unique journal.
+            lan (list): List of lists, where each inner list contains languages for a document.
+            u_lan (list): List of unique languages.
+            lan_count (list): Counts for each unique language.
+            ctr (list): List of lists, where each inner list contains countries for a document.
+            u_ctr (list): List of unique countries.
+            ctr_count (list): Counts for each unique country.
+            ctr_cit (list): Citation counts for each unique country.
+            uni (list): List of lists, where each inner list contains institutions for a document.
+            u_uni (list): List of unique institutions.
+            uni_count (list): Counts for each unique institution.
+            uni_cit (list): Citation counts for each unique institution.
+            doc_aut (list): Document counts for each unique author.
+            av_doc_aut (float): Average documents per author.
+            t_c (list): Total citations for each author.
+            s_c (list): Self-citations for each author.
+            r_c (list): Ratio of self-citations to total citations for each author.
+            natsort (function): Lambda function for natural sorting.
+            dy_c_year (pd.DataFrame): DataFrame of collaboration index per year.
+            dy_ref (list): Publication year for each unique reference.
+            u_ref_id (list): Unique IDs for references (some mapped to document IDs).
+            ref_id (list): List of lists, containing reference IDs for each document.
+            table_id_doc (pd.DataFrame): DataFrame mapping document IDs to document info.
+            dict_id_doc (dict): Dictionary mapping document IDs to document info.
+            table_id_aut (pd.DataFrame): DataFrame mapping author IDs to author names.
+            dict_id_aut (dict): Dictionary mapping author IDs to author names.
+            dict_aut_id (dict): Dictionary mapping author names to author IDs.
+            table_id_jou (pd.DataFrame): DataFrame mapping journal IDs to journal names.
+            dict_id_jou (dict): Dictionary mapping journal IDs to journal names.
+            dict_jou_id (dict): Dictionary mapping journal names to journal IDs.
+            table_id_uni (pd.DataFrame): DataFrame mapping institution IDs to institution names.
+            dict_id_uni (dict): Dictionary mapping institution IDs to institution names.
+            dict_uni_id (dict): Dictionary mapping institution names to institution IDs.
+            table_id_ctr (pd.DataFrame): DataFrame mapping country IDs to country names.
+            dict_id_ctr (dict): Dictionary mapping country IDs to country names.
+            dict_ctr_id (dict): Dictionary mapping country names to country IDs.
+            table_id_kwa (pd.DataFrame): DataFrame mapping author keyword IDs to keywords.
+            dict_id_kwa (dict): Dictionary mapping author keyword IDs to keywords.
+            dict_kwa_id (dict): Dictionary mapping author keywords to their IDs.
+            table_id_kwp (pd.DataFrame): DataFrame mapping keyword plus IDs to keywords.
+            dict_id_kwp (dict): Dictionary mapping keyword plus IDs to keywords.
+            dict_kwp_id (dict): Dictionary mapping keywords plus to their IDs.
+            vb (list): List of strings for verbose output during initialization.
+            ask_gpt_... (various types): Attributes to store results from AI queries or specific analyses,
+                                         initialized to -1. (e.g., `ask_gpt_ap`, `ask_gpt_rt`).
+        """
         db = db.lower()
         self.database = db
         self.institution_names = [
@@ -2873,6 +3013,38 @@ class pbx_probe:
 
     # Function: Prepare .bib File
     def __make_bib(self, verbose=True):
+        """
+        Prepares and processes the bibliographic data after initial loading or updates.
+
+        This internal method is called by `__init__` and other methods that modify
+        the underlying dataset (e.g., `filter_bib`, `merge_database`). It recalculates
+        various attributes and statistics based on the current state of `self.data`.
+
+        Args:
+            verbose (bool, optional): If True, prints summary information after
+                                      processing. Defaults to True.
+
+        Sets or Resets Attributes:
+            - Initializes/resets various `ask_gpt_...` attributes to -1.
+            - Resets author-country and author-institution mapping attributes.
+            - Recalculates:
+                - `dy`, `date_str`, `date_end`, `doc_types`, `av_d_year`
+                - `citation`, `av_c_doc`
+                - `ref`, `u_ref`, `aut`, `u_aut`
+                - Author metrics: `aut_h`, `aut_g`, `aut_e`, `aut_docs`, `aut_single`, `aut_multi`, `aut_cit`
+                - `author_to_papers`
+                - Keyword lists and counts: `kid`, `u_kid`, `kid_count`, `auk`, `u_auk`, `auk_count`
+                - Journal lists and counts: `jou`, `u_jou`, `jou_count`, `jou_cit`
+                - Language lists and counts: `lan`, `u_lan`, `lan_count`
+                - Country lists and counts: `ctr`, `u_ctr`, `ctr_count`, `ctr_cit`
+                - Institution lists and counts: `uni`, `u_uni`, `uni_count`, `uni_cit`
+                - `doc_aut`, `av_doc_aut`
+                - Total and self-citations: `t_c`, `s_c`, `r_c`
+                - Collaboration metrics: `dy_c_year`
+                - Reference metrics: `u_ref`, `dy_ref`, `u_ref_id`, `ref_id`
+            - Calls internal ID generation methods: `__id_document`, `__id_author`, etc.
+            - Updates `self.vb` with verbose output strings if `verbose` is True.
+        """
         self.ask_gpt_ap = -1
         self.ask_gpt_cp = -1
         self.ask_gpt_ip = -1
@@ -3035,6 +3207,24 @@ class pbx_probe:
 
     # Function: Country ID
     def __id_country(self):
+        """
+        Generates and stores unique source (journal) IDs.
+
+        This internal method creates:
+        - `self.table_id_jou`: A DataFrame mapping a prefixed ID (e.g., "j_0", "j_1")
+                               to each unique journal abbreviation.
+        - `self.dict_id_jou`: A dictionary mapping journal IDs to journal names.
+        - `self.dict_jou_id`: A dictionary mapping journal names to journal IDs.
+        """
+        """
+        Generates and stores document IDs and their full bibliographic information.
+
+        This internal method creates:
+        - `self.table_id_doc`: A DataFrame mapping an integer ID (0 to n-1) to
+                               a formatted string containing author, year, title,
+                               journal, and DOI for each document.
+        - `self.dict_id_doc`: A dictionary version of `self.table_id_doc`.
+        """
         ctr_list = ["c_" + str(i) for i in range(0, len(self.u_ctr))]
         self.table_id_ctr = pd.DataFrame(
             zip(ctr_list, self.u_ctr), columns=["ID", "Country"]
@@ -3045,6 +3235,15 @@ class pbx_probe:
 
     # Function: Authors' Keyword ID
     def __id_kwa(self):
+        """
+        Generates and stores unique author IDs.
+
+        This internal method creates:
+        - `self.table_id_aut`: A DataFrame mapping a prefixed ID (e.g., "a_0", "a_1")
+                               to each unique author name.
+        - `self.dict_id_aut`: A dictionary mapping author IDs to author names.
+        - `self.dict_aut_id`: A dictionary mapping author names to author IDs.
+        """
         kwa_list = ["k_" + str(i) for i in range(0, len(self.u_auk))]
         self.table_id_kwa = pd.DataFrame(
             zip(kwa_list, self.u_auk), columns=["ID", "KWA"]
@@ -3055,6 +3254,24 @@ class pbx_probe:
 
     # Function: Keywords Plus ID
     def __id_kwp(self):
+        """
+        Generates and stores unique Keywords Plus IDs.
+
+        This internal method creates:
+        - `self.table_id_kwp`: A DataFrame mapping a prefixed ID (e.g., "p_0", "p_1")
+                               to each unique Keyword Plus.
+        - `self.dict_id_kwp`: A dictionary mapping Keyword Plus IDs to keywords.
+        - `self.dict_kwp_id`: A dictionary mapping Keywords Plus to their IDs.
+        """
+        """
+        Generates and stores unique author keyword IDs.
+
+        This internal method creates:
+        - `self.table_id_kwa`: A DataFrame mapping a prefixed ID (e.g., "k_0", "k_1")
+                               to each unique author keyword.
+        - `self.dict_id_kwa`: A dictionary mapping author keyword IDs to keywords.
+        - `self.dict_kwa_id`: A dictionary mapping author keywords to their IDs.
+        """
         kwp_list = ["p_" + str(i) for i in range(0, len(self.u_kid))]
         self.table_id_kwp = pd.DataFrame(
             zip(kwp_list, self.u_kid), columns=["ID", "KWP"]
@@ -3065,6 +3282,14 @@ class pbx_probe:
 
     # Function: ID types
     def id_doc_types(self):
+        """
+        Identifies and groups document IDs by their document type.
+
+        Returns:
+            pd.DataFrame: A DataFrame with two columns:
+                          - "Document Types": The unique document types found.
+                          - "IDs": A list of document IDs belonging to that type.
+        """
         dt = self.doc_types.index.to_list()
         dt_ids = []
         for i in range(0, len(dt)):
@@ -3076,6 +3301,24 @@ class pbx_probe:
 
     # Function: Filter Lists
     def filter_list(self, u_e=[], e=[], simple=False):
+        """
+        Filters and counts items in a list of lists, optionally sorting by count.
+
+        Args:
+            u_e (list, optional): List of unique elements to count. Defaults to [].
+            e (list, optional): List of lists, where each inner list contains elements.
+                                Defaults to [].
+            simple (bool, optional): If True, performs a simple count without
+                                     filtering out "unknown" or sorting by count.
+                                     Defaults to False.
+
+        Returns:
+            tuple[list, list]: A tuple containing:
+                               - u_e_filtered (list): The (potentially filtered and sorted)
+                                                      list of unique elements.
+                               - e_count (list): The corresponding counts for each element
+                                                 in `u_e_filtered`.
+        """
         if simple:
             e_ = [item for sublist in e for item in sublist]
             e_count = [e_.count(item) for item in u_e]
@@ -3102,6 +3345,39 @@ class pbx_probe:
         language=[],
         abstract=False,
     ):
+        """
+        Filters the bibliographic data based on specified criteria.
+
+        This method modifies `self.data` in place and then calls `self.__make_bib()`
+        to reprocess the dataset and update all related attributes.
+
+        Args:
+            documents (list, optional): A list of document indices to keep.
+                                        Defaults to [].
+            doc_type (list, optional): A list of document types to keep (e.g., ["Article", "Review"]).
+                                       Defaults to [].
+            year_str (int, optional): The starting year (inclusive) for filtering.
+                                      Defaults to -1 (no start year filter).
+            year_end (int, optional): The ending year (inclusive) for filtering.
+                                      Defaults to -1 (no end year filter).
+            sources (list, optional): A list of journal/source abbreviations to keep.
+                                      Defaults to [].
+            core (int, optional): Filters by Bradford's Law zones.
+                                  - 1: Core sources (first 1/3 of documents).
+                                  - 2: Middle zone sources (next 1/3 of documents).
+                                  - 3: Peripheral sources (last 1/3 of documents).
+                                  - 12: Core and Middle zone sources.
+                                  - 23: Middle and Peripheral zone sources.
+                                  Defaults to -1 (no core filter).
+            country (list, optional): A list of countries to filter by. Keeps documents
+                                      associated with any of the specified countries.
+                                      Defaults to [].
+            language (list, optional): A list of languages to keep.
+                                       Defaults to [].
+            abstract (bool, optional): If True, keeps only documents that have an abstract
+                                       (i.e., abstract field is not "UNKNOWN").
+                                       Defaults to False.
+        """
         docs = []
         if len(documents) > 0:
             self.data = self.data.iloc[documents, :]
@@ -3184,6 +3460,19 @@ class pbx_probe:
 
     # Function: Clean DOI entries
     def clean_doi(doi):
+        """
+        Cleans a DOI string by retaining only valid characters.
+
+        Valid characters include alphanumeric characters and ./ - _ :
+
+        Args:
+            doi (str): The DOI string to clean.
+
+        Returns:
+            str: The cleaned DOI string. If the input is invalid or contains
+                 unrecognized characters at the beginning, it might return
+                 an empty string or a partially cleaned DOI.
+        """
         valid_chars = set(
             "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ./-_:"
         )
@@ -3197,6 +3486,29 @@ class pbx_probe:
 
     # Function: Fuzzy String Matcher # Entry = self.u_aut, self.u_inst, or list with Unique items
     def fuzzy_matcher(self, entry, tgt=[], cut_ratio=0.80):
+        """
+        Performs fuzzy string matching on a list of unique items.
+
+        Uses `difflib.SequenceMatcher` to find strings that are similar above
+        a given ratio.
+
+        Args:
+            entry (list): A list of unique strings to perform matching on
+                          (e.g., `self.u_aut`, `self.u_inst`).
+            tgt (list, optional): A list of target strings. If provided, matching
+                                  is done between `tgt` and `entry`. Otherwise,
+                                  all-pairs matching within `entry` is performed.
+                                  Defaults to [].
+            cut_ratio (float, optional): The minimum similarity ratio (0.0 to 1.0)
+                                         for two strings to be considered a match.
+                                         Defaults to 0.80.
+
+        Returns:
+            dict: A dictionary where keys are items from `entry` (or `tgt`) and
+                  values are lists of other items from `entry` that match
+                  the key above the `cut_ratio`. Only items with at least one
+                  match are included in the dictionary.
+        """
         u_lst = [item for item in entry]
         matches = {item: [] for item in u_lst}
         if tgt:
@@ -3224,6 +3536,21 @@ class pbx_probe:
 
     # Function: Merge Database
     def merge_database(self, file_bib, db, del_duplicated):
+        """
+        Merges another bibliographic file into the current dataset.
+
+        Reads a new bibliographic file, concatenates it with the existing data,
+        removes duplicates (based on DOI and title), and then re-processes the
+        entire dataset by calling `self.__make_bib()`.
+
+        Args:
+            file_bib (str): Path to the new bibliographic file to merge.
+            db (str): The database source of the new file (e.g., "scopus", "wos").
+            del_duplicated (bool): Whether to remove duplicated entries after merging.
+
+        Prints:
+            Information about the original and added databases, and merging statistics.
+        """
         old_vb = [item for item in self.vb]
         old_size = self.data.shape[0]
         print(
@@ -3303,6 +3630,23 @@ class pbx_probe:
 
     # Function: Load Working Database
     def load_database(self, name="data.csv"):
+        """
+        Loads processed bibliographic data from a previously saved CSV file.
+
+        This replaces the current `self.data` with the loaded data and then
+        calls `self.__make_bib(verbose=False)` to reprocess.
+
+        Args:
+            name (str, optional): Name of the CSV file to load.
+                                  Defaults to "data.csv".
+        """
+        """
+        Saves the current processed bibliographic data to a CSV file.
+
+        Args:
+            sep (str, optional): Separator for the CSV file. Defaults to "\t" (tab).
+            name (str, optional): Name of the CSV file to save. Defaults to "data.csv".
+        """
         data = pd.read_csv(name, dtype=str)
         self.data = data.copy(deep=True)
         self.__make_bib(verbose=False)
@@ -3380,6 +3724,71 @@ class pbx_probe:
 
     # Function: Merge Reference
     def merge_reference(self, get=[], replace_for="name"):
+        """
+        Merges specified reference strings.
+
+        Targets the 'references' field for replacement.
+        Calls `self.__make_bib(verbose=False)` after processing.
+
+        Args:
+            get (list, optional): List of reference strings to merge. Defaults to [].
+            replace_for (str, optional): Target reference string. Defaults to "name".
+        """
+        """
+        Merges specified source (journal) names.
+
+        Targets the 'abbrev_source_title' field for replacement.
+        Calls `self.__make_bib(verbose=False)` after processing.
+
+        Args:
+            get (list, optional): List of source names to merge. Defaults to [].
+            replace_for (str, optional): Target source name. Defaults to "name".
+        """
+        """
+        Merges specified language names in the 'language' field.
+
+        If a language name from `get` is found (case-insensitive), it's replaced.
+        Calls `self.__make_bib(verbose=False)` after processing.
+
+        Args:
+            get (list, optional): List of language names to merge. Defaults to [].
+            replace_for (str, optional): Target language name. Defaults to "name".
+        """
+        """
+        Merges specified country names within affiliation strings.
+
+        Similar to `merge_institution`, but targets country names for replacement.
+        Calls `self.__make_bib(verbose=False)` after processing.
+
+        Args:
+            get (list, optional): List of country names to merge. Defaults to [].
+            replace_for (str, optional): Target country name. Defaults to "name".
+        """
+        """
+        Merges specified institution names within affiliation strings.
+
+        Iterates through affiliation data. If an institution name from `get`
+        is found (case-insensitive), it's replaced with `replace_for`.
+        This affects 'affiliation' or 'affiliation_' columns depending on the source.
+        Calls `self.__make_bib(verbose=False)` after processing.
+
+        Args:
+            get (list, optional): List of institution names to merge. Defaults to [].
+            replace_for (str, optional): Target institution name. Defaults to "name".
+        """
+        """
+        Merges specified author names into a single target name.
+
+        Iterates through the 'author' field of each document. If any name in `get`
+        is found (case-insensitive), it's replaced with `replace_for`.
+        After replacements, `self.__make_bib(verbose=False)` is called.
+
+        Args:
+            get (list, optional): A list of author names (strings) to be merged.
+                                  Defaults to [].
+            replace_for (str, optional): The target author name to replace with.
+                                         Defaults to "name".
+        """
         for name in get:
             for i in range(0, self.data.shape[0]):
                 target = self.data.loc[i, "references"].lower()
@@ -3392,6 +3801,23 @@ class pbx_probe:
 
     # Function: Replace Keyword Plus
     def replace_keyword_plus(self, replace_all, edit=True):
+        """
+        Replaces the 'keywords' (Keywords Plus) field for all documents.
+
+        Args:
+            replace_all (list): A list containing the new keyword data.
+                                Its structure depends on the `edit` flag.
+                                - If `edit` is True: `replace_all` should be a list of lists,
+                                  where each inner list contains tuples of (phrase, score).
+                                  These will be joined by "; ".
+                                - If `edit` is False: `replace_all` should be a list of
+                                  strings, where each string is the new keywords field
+                                  for the corresponding document.
+            edit (bool, optional): If True, expects `replace_all` to be a list of
+                                   phrase-score tuples and formats them. If False,
+                                   expects `replace_all` to be a list of pre-formatted
+                                   keyword strings. Defaults to True.
+        """
         if edit:
             result_strings = [
                 "; ".join([phrase for (phrase, _) in sub]) for sub in replace_all
@@ -3404,6 +3830,19 @@ class pbx_probe:
 
     # Function: Transform Hex to RGBa
     def __hex_rgba(self, hxc="#ba6200", alpha=0.15):
+        """
+        Converts a HEX color code to an RGBa string.
+
+        Args:
+            hxc (str, optional): HEX color string (e.g., "#ba6200").
+                                 Defaults to "#ba6200".
+            alpha (float, optional): Alpha transparency value (0.0 to 1.0).
+                                     Defaults to 0.15.
+
+        Returns:
+            str: RGBa color string (e.g., "rgba(186,98,0,0.15)").
+                 Returns "black" if the hex code is invalid.
+        """
         if hxc.find("#") == 0:
             hxc = hxc.lstrip("#")
             rgb = tuple(int(hxc[i : i + 2], 16) for i in (0, 2, 4))
@@ -3499,6 +3938,39 @@ class pbx_probe:
 
     # Function: Health of .bib docs
     def health_bib(self):
+        """
+        Checks the completeness of key bibliographic entries.
+
+        Calculates the percentage of non-"UNKNOWN" entries for fields like
+        sources, abstracts, affiliation, author, DOI, keywords, references, and year.
+
+        Returns:
+            pd.DataFrame: A DataFrame with columns:
+                          - "Entries": The name of the checked bibliographic field.
+                          - "Completeness (%)": The percentage of entries that are not "UNKNOWN".
+                          - "Number of Docs": The count of documents with non-"UNKNOWN" entries
+                                              for that field.
+        """
+        """
+        Performs Exploratory Data Analysis (EDA) on the bibliographic data.
+
+        Calculates and compiles various summary statistics about the dataset.
+        The results are stored in `self.ask_gpt_rt` and also returned.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing main information and results
+                          of the EDA. Metrics include:
+                          - Timespan
+                          - Total counts of countries, institutions, sources, references, languages
+                          - Document counts by language and type
+                          - Average documents per author, institution, source, year
+                          - Total counts of authors, author keywords, keywords plus
+                          - Counts of single-authored and multi-authored documents
+                          - Average collaboration index
+                          - Max H-Index
+                          - Total citation counts
+                          - Average citations per author, institution, document, source
+        """
         n = self.data.shape[0]
         health = []
         check = {
@@ -3528,6 +4000,35 @@ class pbx_probe:
 
     # Function: Read .bib File
     def __read_bib(self, bib, db="scopus", del_duplicated=True):
+        """
+        Reads and parses a bibliographic file from various database formats.
+
+        This is a core internal method for loading data. It handles different
+        parsing logic based on the specified database (`db`). It standardizes
+        column names and performs initial cleaning, such as removing duplicates.
+
+        Args:
+            bib (str): Path to the bibliographic file.
+            db (str, optional): The database source ("scopus", "wos", "pubmed").
+                                Defaults to "scopus".
+            del_duplicated (bool, optional): If True, removes duplicate entries
+                                             based on DOI and title. Defaults to True.
+
+        Returns:
+            tuple[pd.DataFrame, list]:
+                - data (pd.DataFrame): The parsed and partially processed bibliographic data.
+                - entries (list): A list of column names found in the parsed data.
+
+        Internal Helper Functions Used:
+            - `assign_authors_to_affiliations`: (Nested within __read_bib)
+            - `get_corresponding_authors_and_affiliations`: (Nested within __read_bib)
+            - `map_authors_to_affiliations`: (Nested within __read_bib)
+            - `self.clear_text`: For cleaning titles if `del_duplicated` is True.
+
+        Note:
+            This method populates `self.vb` with verbose output about the reading process.
+            It also handles mapping of database-specific field names to a common schema.
+        """
         # ----------------------------------------------------------------------
 
         def assign_authors_to_affiliations(authors_str, affiliations_str):
@@ -4251,6 +4752,12 @@ class pbx_probe:
 
     # Function: Update Verbose
     def __update_vb(self):
+        """
+        Updates the verbose output list (`self.vb`) after data filtering.
+
+        This internal method is typically called after `filter_bib` to reflect
+        the new state of the dataset in the verbose summary.
+        """
         self.vb = []
         self.vb.append("A Total of " + str(self.data.shape[0]) + " Documents Remains")
         types = list(self.data["document_type"])
@@ -4267,6 +4774,29 @@ class pbx_probe:
 
     # Function: Get Entries
     def __get_str(self, entry="references", s=";", lower=True, sorting=True):
+        """
+        Extracts, splits, and optionally cleans textual entries from a DataFrame column.
+
+        This internal method is used to process fields like references, authors,
+        keywords, etc., by splitting them based on a separator and performing
+        optional lowercasing and sorting.
+
+        Args:
+            entry (str, optional): The column name in `self.data` to process.
+                                   Defaults to "references".
+            s (str, optional): The separator string to split entries. Defaults to ";".
+            lower (bool, optional): Whether to convert entries to lowercase.
+                                    Defaults to True.
+            sorting (bool, optional): Whether to sort the list of unique entries.
+                                      Defaults to True.
+
+        Returns:
+            tuple[list, list]:
+                - info (list): A list of lists, where each inner list contains
+                               the processed (split, cleaned) items for a document.
+                - unique_info (list): A sorted list of unique processed items
+                                      across all documents.
+        """
         column = self.data[entry]
         info = [
             [
@@ -4465,6 +4995,20 @@ class pbx_probe:
 
     # Function: Replace Unknows
     def replace_unknowns(self, list_of_lists):
+        """
+        Replaces "UNKNOWN" values in a list of lists with the preceding valid value.
+
+        Iterates through each sublist. If an "UNKNOWN" string is encountered,
+        it's replaced by the last known non-"UNKNOWN" value in that same sublist.
+        If "UNKNOWN" is the first item, it remains "UNKNOWN".
+
+        Args:
+            list_of_lists (list): A list of lists, where inner lists may
+                                  contain "UNKNOWN" strings.
+
+        Returns:
+            list: A new list of lists with "UNKNOWN" values replaced as described.
+        """
         new_list = []
         for sublist in list_of_lists:
             new_sublist = []
@@ -4482,6 +5026,37 @@ class pbx_probe:
 
     # Function: Get Institutions
     def __get_institutions(self):
+        """
+        Extracts and maps institutions from author affiliation data.
+
+        This method processes affiliation strings to identify institutions
+        associated with authors for each document. It uses predefined lists of
+        institution name parts and their priorities for matching.
+
+        It populates:
+        - `self.author_inst_map`: Maps each unique author to a list of
+                                   (document_index, institution_name) tuples.
+        - `self.corr_a_inst_map`: Maps corresponding authors to their institution data.
+        - `self.frst_a_inst_map`: Maps first authors to their institution data.
+
+        Returns:
+            tuple[list, list]:
+                - inst (list): A list of lists, where `inst[i]` contains the list of
+                               institutions associated with the authors of document `i`.
+                - u_inst (list): A list of unique institution names found.
+
+        Internal Helper Functions Used:
+            - `extract_top_institution_with_priority`: (Nested within __get_institutions)
+        """
+        """
+        Generates and stores unique institution IDs.
+
+        This internal method creates:
+        - `self.table_id_uni`: A DataFrame mapping a prefixed ID (e.g., "i_0", "i_1")
+                               to each unique institution name.
+        - `self.dict_id_uni`: A dictionary mapping institution IDs to institution names.
+        - `self.dict_uni_id`: A dictionary mapping institution names to institution IDs.
+        """
         # ----------------------------------------------------------------------
 
         def extract_top_institution_with_priority(text, institution_names):
@@ -4611,6 +5186,21 @@ class pbx_probe:
 
     # Function: Get Counts
     def __get_counts(self, u_ent, ent, acc=[]):
+        """
+        Extracts numeric citation counts from a Pandas Series.
+
+        This internal method processes a series (typically the 'note' column)
+        that contains citation information. It attempts to extract the first
+        numeric value, handling cases where citation counts might be followed
+        by other text (e.g., "Cited by: 5; Blah").
+
+        Args:
+            series (pd.Series): A Pandas Series containing citation strings.
+
+        Returns:
+            list: A list of integer citation counts. If a value cannot be
+                  parsed as an integer, 0 is returned for that entry.
+        """
         counts = []
         for u in u_ent:
             ents = 0
@@ -4625,6 +5215,68 @@ class pbx_probe:
 
     # Function: Get Count Year
     def __get_counts_year(self, u_ent, ent):
+        """
+        Calculates the frequency of unique entries per year.
+
+        For each unique entry in `u_ent`, this method counts its occurrences
+        in `ent` (a list of lists, one per document) for each year within
+        the dataset's timespan (`self.date_str` to `self.date_end`).
+
+        Args:
+            u_ent (list): A list of unique entries.
+            ent (list): A list of lists, where `ent[j]` contains the entries
+                        for document `j`.
+
+        Returns:
+            pd.DataFrame: A DataFrame where rows correspond to unique entries (`u_ent`)
+                          and columns correspond to years. Cell `(i, k)` contains
+                          the number of times `u_ent[i]` appeared in documents
+                          published in `year[k]`.
+        """
+        """
+        Calculates counts or accumulated values for unique entries.
+
+        For each unique entry in `u_ent`, this method iterates through `ent`
+        (a list of lists) and counts occurrences. If `acc` (accumulator) list
+        is provided, it sums the corresponding values from `acc` instead of
+        just counting.
+
+        Args:
+            u_ent (list): A list of unique entries (e.g., unique authors, keywords).
+            ent (list): A list of lists, where each inner list corresponds to a
+                        document and contains entries (e.g., authors of a document).
+            acc (list, optional): A list of accumulator values (e.g., citation counts
+                                  for each document). If provided, its length should
+                                  match the number of documents (length of `ent`).
+                                  Defaults to [].
+
+        Returns:
+            list: A list of counts (or summed accumulator values) corresponding
+                  to each unique entry in `u_ent`.
+        """
+        """
+        Extracts and maps countries from author affiliation data.
+
+        This complex internal method processes affiliation strings to identify
+        countries associated with authors for each document. It uses predefined
+        lists of country names and performs cleaning and mapping.
+
+        It populates:
+        - `self.author_country_map`: Maps each unique author to a list of
+                                     (document_index, country_name) tuples.
+        - `self.corr_a_country_map`: Maps corresponding authors to their country data.
+        - `self.frst_a_country_map`: Maps first authors to their country data.
+
+        Returns:
+            tuple[list, list]:
+                - ctr (list): A list of lists, where `ctr[i]` contains the list of
+                              countries associated with the authors of document `i`.
+                - u_ctr (list): A list of unique country names found.
+
+        Internal Helper Functions Used:
+            - `preprocess_affiliation`: (Nested within __get_countries)
+            - `get_additional_country_data`: (Nested within __get_countries)
+        """
         years = list(range(self.date_str, self.date_end + 1))
         df_counts = pd.DataFrame(np.zeros((len(u_ent), len(years))))
         for i in range(0, len(u_ent)):
@@ -4636,6 +5288,32 @@ class pbx_probe:
 
     # Function: Get Collaboration Year
     def __get_collaboration_year(self):
+        """
+        Calculates collaboration metrics per year.
+
+        This method computes the distribution of the number of authors per document
+        for each year in the dataset, as well as a Collaboration Index (CI) for each year.
+        The CI is the sum of (number_of_authors * count_of_documents_with_that_many_authors)
+        divided by the total number of documents for that year.
+
+        Returns:
+            pd.DataFrame: A DataFrame where rows are years (and a "Total" row)
+                          and columns are "n = X" (number of documents with X authors)
+                          and "ci" (Collaboration Index).
+        """
+        """
+        Calculates the number of "past" citations received each year by documents
+        within the current dataset.
+
+        A "past" citation here means a citation from another document also present
+        in the loaded dataset. It iterates through each document's references and
+        checks if those references (matched by title) are also in the dataset.
+
+        Returns:
+            tuple[list, list]:
+                - c_year_ (list): Sorted list of unique publication years.
+                - c_count_ (list): Corresponding total past citation counts for each year.
+        """
         max_aut = list(set([str(item) for item in self.aut_docs]))
         max_aut = sorted(max_aut, key=self.natsort)
         n_collaborators = ["n = " + i for i in max_aut]
@@ -4680,6 +5358,35 @@ class pbx_probe:
 
     # Function: Get Reference ID
     def __get_ref_id(self):
+        """
+        Generates unique IDs for references, mapping them to document IDs if possible.
+
+        This internal method attempts to match unique references (`self.u_ref`)
+        to documents within the current dataset by comparing reference strings
+        against document titles (for Scopus/PubMed) or DOIs (for WoS).
+
+        If a match is found, the reference ID becomes the ID of the matched document.
+        Otherwise, it gets a prefixed ID (e.g., "r_0", "r_1").
+        It also updates `self.dy_ref` (publication year of references) if a
+        reference is matched to an internal document.
+
+        Returns:
+            list: A list of reference IDs. Each ID is either a document ID (stringified
+                  integer) if the reference is internal, or a prefixed "r_X" string
+                  if it's an external reference.
+        """
+        """
+        Extracts the publication year for each unique reference.
+
+        It parses each unique reference string (`self.u_ref`) to find a 4-digit year
+        between 1665 and the dataset's maximum publication year (`self.date_end`).
+        If multiple valid years are found in a reference string, the maximum is taken.
+        If no valid year is found, -1 is assigned.
+
+        Returns:
+            list: A list of integer years corresponding to each reference in `self.u_ref`.
+                  Returns -1 for references where no valid year could be extracted.
+        """
         labels_r = ["r_" + str(i) for i in range(0, len(self.u_ref))]
         sources = self.data["source"].str.lower()
         keys_1 = (
@@ -4727,6 +5434,31 @@ class pbx_probe:
     def word_cloud_plot(
         self, entry="kwp", size_x=10, size_y=10, wordsn=500, rmv_custom_words=[]
     ):
+        """
+        Generates and displays a word cloud from specified textual data.
+
+        The word cloud is created based on the frequency of words in the selected corpus.
+        The resulting word frequencies are stored in `self.ask_gpt_wd`.
+
+        Args:
+            entry (str, optional): The type of text data to use for the word cloud.
+                                   Options are:
+                                   - "kwp": Keywords Plus (self.kid)
+                                   - "kwa": Author Keywords (self.auk, though code uses self.kid)
+                                   - "abs": Abstracts (self.data["abstract"])
+                                   - "title": Titles (self.data["title"])
+                                   Defaults to "kwp".
+            size_x (int, optional): Width of the plot. Defaults to 10.
+            size_y (int, optional): Height of the plot. Defaults to 10.
+            wordsn (int, optional): Maximum number of words to display in the cloud.
+                                    Defaults to 500.
+            rmv_custom_words (list, optional): A list of custom words to remove
+                                               from the corpus before generating
+                                               the word cloud. Defaults to [].
+
+        Displays:
+            A matplotlib plot of the generated word cloud.
+        """
         if entry == "kwp":
             kid_ = [item for sublist in self.kid for item in sublist]
             corpora = " ".join(kid_)
@@ -4783,6 +5515,29 @@ class pbx_probe:
         rmv_custom_words=[],
         wordsn=15,
     ):
+        """
+        Identifies and plots the most frequent N-grams from a specified corpus.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            entry (str, optional): The corpus to analyze. Options:
+                                   "kwp" (Keywords Plus), "kwa" (Author Keywords),
+                                   "abs" (Abstracts), "title" (Titles).
+                                   Defaults to "kwp".
+            ngrams (int, optional): The "N" in N-grams (e.g., 1 for unigrams, 2 for bigrams).
+                                    Defaults to 1.
+            stop_words (list, optional): List of language codes (e.g., "en", "es")
+                                         for stopword removal. Defaults to [].
+            rmv_custom_words (list, optional): Additional custom words to remove.
+                                               Defaults to [].
+            wordsn (int, optional): Number of top N-grams to display. Defaults to 15.
+
+        Sets Attributes:
+            self.ask_gpt_ng (pd.DataFrame): DataFrame with "Word" and "Freq" of top N-grams.
+
+        Displays:
+            A Plotly horizontal bar chart of the top N-grams and their frequencies.
+        """
         sw_full = []
         if view == "browser":
             pio.renderers.default = "browser"
@@ -4902,6 +5657,27 @@ class pbx_probe:
 
     # Function: Tree Map
     def tree_map(self, view="browser", entry="kwp", topn=20):
+        """
+        Generates and displays a treemap visualization for categorical data.
+
+        Suitable for visualizing the distribution of authors, keywords, sources, etc.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            entry (str, optional): The data to visualize. Options:
+                                   - "kwp": Keywords Plus
+                                   - "kwa": Author Keywords
+                                   - "aut": Authors
+                                   - "jou": Sources (Journals)
+                                   - "ctr": Countries
+                                   - "inst": Institutions
+                                   Defaults to "kwp".
+            topn (int, optional): Number of top items to display in the treemap.
+                                  Defaults to 20.
+
+        Displays:
+            A Plotly treemap.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         if entry == "kwp":
@@ -5339,6 +6115,77 @@ class pbx_probe:
 
     # Function: Sources' Productivity Plot
     def source_productivity(self, view="browser", topn=20):
+        """
+        Plots the productivity of the top N sources (journals) over time.
+
+        Similar to `authors_productivity`, but for sources.
+        Displays a scatter plot showing publication counts per source per year.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            topn (int, optional): Number of top sources (by total document count)
+                                  to include. Defaults to 20.
+
+        Sets Attributes:
+            self.ask_gpt_sp (pd.DataFrame): DataFrame of source productivity data.
+
+        Displays:
+            A Plotly scatter plot.
+        """
+        """
+        Plots the productivity of the top N institutions over time.
+
+        Similar to `authors_productivity`, but for institutions.
+        Displays a scatter plot showing publication counts per institution per year.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            topn (int, optional): Number of top institutions (by total document count)
+                                  to include. Defaults to 20.
+
+        Sets Attributes:
+            self.ask_gpt_ip (pd.DataFrame): DataFrame of institution productivity data.
+
+        Displays:
+            A Plotly scatter plot.
+        """
+        """
+        Visualizes country productivity over time using an animated choropleth map.
+
+        The animation slider allows viewing publication counts per country for each year
+        and for "All Years" (cumulative).
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+
+        Sets Attributes:
+            self.ask_gpt_cp (pd.DataFrame): DataFrame where rows are countries,
+                                            columns are years (plus "All Years"),
+                                            and values are publication counts.
+
+        Displays:
+            A Plotly animated choropleth map.
+        """
+        """
+        Plots the productivity of the top N authors over time.
+
+        Displays a scatter plot where each author is on the y-axis and years
+        are on the x-axis. Markers indicate the number of publications by an
+        author in a given year. Lines connect an author's publications across years.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            topn (int, optional): Number of top authors (by total document count)
+                                  to include in the plot. Defaults to 20.
+
+        Sets Attributes:
+            self.ask_gpt_ap (pd.DataFrame): A DataFrame where rows are top authors,
+                                            columns are years, and values are
+                                            publication counts.
+
+        Displays:
+            A Plotly scatter plot.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         if topn > len(self.u_jou):
@@ -5468,6 +6315,35 @@ class pbx_probe:
         start=2010,
         end=2022,
     ):
+        """
+        Plots the evolution of the top N keywords/terms per year as a stacked bar chart.
+
+        For each year within the specified range (`start` to `end`), it identifies
+        the `topn` most frequent terms (from the selected `key` corpus) and plots
+        their frequencies.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            stop_words (list, optional): List of language codes for stopword removal
+                                         if `key` is "abs" or "title". Defaults to ["en"].
+            key (str, optional): The corpus to analyze. Options:
+                                 "kwp" (Keywords Plus), "kwa" (Author Keywords),
+                                 "jou" (Journals), "abs" (Abstracts), "title" (Titles).
+                                 Defaults to "kwp".
+            rmv_custom_words (list, optional): Additional custom words to remove.
+                                               Defaults to [].
+            topn (int, optional): Number of top terms to display per year. Defaults to 10.
+            txt_font_size (int, optional): Font size for text on bars. Defaults to 10.
+            start (int, optional): Start year for the analysis. Defaults to 2010.
+            end (int, optional): End year for the analysis. Defaults to 2022.
+
+        Sets Attributes:
+            self.ask_gpt_ep (str): A string summarizing the top terms and their counts
+                                   for each year, used for AI querying.
+
+        Displays:
+            A Plotly stacked bar chart.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         if start < self.date_str or start == -1:
@@ -5590,6 +6466,20 @@ class pbx_probe:
 
     # Function: Parse Evolution Plot Data
     def parse_ep_data(self, input_text):
+        """
+        Parses a text string containing evolution plot data into a dictionary.
+
+        The input text is expected to be in the format generated by
+        `plot_evolution_year`'s `self.ask_gpt_ep` attribute, e.g.,
+        "YYYY: keyword1 (count1), keyword2 (count2)... YYYY: keywordA (countA)..."
+
+        Args:
+            input_text (str): The string data to parse.
+
+        Returns:
+            dict: A dictionary where keys are years (str) and values are
+                  dictionaries of {keyword (str): count (int)}.
+        """
         data = defaultdict(dict)
         year_entries = re.split(r"(\d{4}):", input_text)[1:]
         years = year_entries[::2]
@@ -5604,6 +6494,25 @@ class pbx_probe:
     def plot_evolution_year_complement(
         self, ep_text, view="browser", topn=10, custom=[]
     ):
+        """
+        Plots a complementary view of keyword evolution over time as a stacked area chart.
+
+        This function takes the text output from `self.ask_gpt_ep` (generated by
+        `plot_evolution_year`) or similar formatted string, parses it, and
+        creates a stacked area chart showing the frequency trends of keywords.
+
+        Args:
+            ep_text (str): Text data generated by `plot_evolution_year` or similar,
+                           containing yearly keyword frequencies.
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            topn (int, optional): If `custom` is not provided, this specifies the
+                                  number of top overall keywords to plot. Defaults to 10.
+            custom (list, optional): A list of specific keywords to plot. If provided,
+                                     `topn` is ignored. Defaults to [].
+
+        Displays:
+            A Plotly stacked area chart showing keyword frequency trends over years.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         data = self.parse_ep_data(ep_text)
@@ -5649,6 +6558,40 @@ class pbx_probe:
 
     # Function: Plot Bar
     def plot_bars(self, view="browser", statistic="dpy", topn=20):
+        """
+        Generates and displays various bar plots for bibliometric statistics.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            statistic (str, optional): The statistic to plot. Options include:
+                - "dpy": Documents per Year
+                - "cpy": Citations per Year
+                - "ppy": Past Citations per Year (citations from within the dataset)
+                - "ltk": Lotka's Law (author productivity distribution)
+                - "spd": Top N Sources per Documents
+                - "spc": Top N Sources per Citations
+                - "apd": Top N Authors per Documents
+                - "apc": Top N Authors per Citations
+                - "aph": Top N Authors per H-Index
+                - "bdf_1", "bdf_2", "bdf_3": Bradford's Law core source zones
+                - "ipd": Top N Institutions per Documents
+                - "ipc": Top N Institutions per Citations
+                - "cpd": Top N Countries per Documents
+                - "cpc": Top N Countries per Citations
+                - "lpd": Top N Languages per Documents
+                - "kpd": Top N Keywords Plus per Documents
+                - "kad": Top N Authors' Keywords per Documents (Note: uses self.u_kid, likely a bug, should be self.u_auk)
+                Defaults to "dpy".
+            topn (int, optional): Number of top items to display for "Top N" plots.
+                                  Defaults to 20.
+
+        Sets Attributes:
+            self.ask_gpt_bp (pd.DataFrame): DataFrame of the data used for the bar plot.
+            self.ask_gpt_bp_t (str): Title of the generated plot.
+
+        Displays:
+            A Plotly bar chart. Vertical for time-based/Lotka's, horizontal for Top N.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         if statistic.lower() == "dpy":
@@ -5940,6 +6883,30 @@ class pbx_probe:
 
     # Function: Enumerate Relationship
     def enumerate_relationships(self, sk_data, entry, rmv_unknowns):
+        """
+        Enumerates relationships between sequential pairs of entity types.
+
+        Given a DataFrame `sk_data` and a list of entity types `entry` (column names
+        in `sk_data`), this function iterates through pairs of consecutive entity
+        types (e.g., entry[0] and entry[1], then entry[1] and entry[2]).
+        For each document, it creates pairs of all items from the first entity type
+        with all items from the second entity type.
+
+        Args:
+            sk_data (pd.DataFrame): DataFrame containing lists of entities per document.
+                                    Expected columns are those specified in `entry`.
+            entry (list): A list of column names from `sk_data` representing
+                          entity types (e.g., ["aut", "cout", "inst"]).
+            rmv_unknowns (bool): If True, pairs involving "unknown" entities
+                                 (case-insensitive) are excluded. If False, "unknown"
+                                 entities are included and may be suffixed with their
+                                 column name (e.g., "UNKNOWN_aut").
+
+        Returns:
+            list: A list of lists of tuples. Each inner list corresponds to a
+                  relationship between two consecutive entity types from `entry`.
+                  Each tuple is a (source_entity, target_entity) pair.
+        """
         rel_lists = []
         for i in range(0, len(entry) - 1):
             source_col = entry[i]
@@ -5985,6 +6952,33 @@ class pbx_probe:
         text_font_size=12,
         x_angle=-90,
     ):
+        """
+        Plots a stacked bar chart showing the distribution of entity Y per entity X.
+
+        For example, it can show the distribution of top authors (Y) for each of the
+        top countries (X).
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            rmv_unknowns (bool, optional): If True, "unknown" entities are removed
+                                           before counting. Defaults to True.
+            x (str, optional): The entity type for the x-axis (e.g., "cout", "inst").
+                               Defaults to "cout" (countries).
+            y (str, optional): The entity type for the y-axis (stacked bars)
+                               (e.g., "aut", "jou"). Defaults to "aut" (authors).
+            topn_x (int, optional): Number of top X entities to display. Defaults to 5.
+            topn_y (int, optional): Number of top Y entities to display for each X.
+                                    Defaults to 5.
+            text_font_size (int, optional): Font size for text on bars. Defaults to 12.
+            x_angle (int, optional): Angle for x-axis tick labels. Defaults to -90.
+
+        Sets Attributes:
+            self.top_y_x (pd.DataFrame): DataFrame containing the data for the top Y
+                                         entities per top X entity, with counts.
+
+        Displays:
+            A Plotly stacked bar chart.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         sk_data = pd.DataFrame(
@@ -6052,6 +7046,31 @@ class pbx_probe:
     def plot_heatmap_y_per_x(
         self, x, y, topn_x=5, topn_y=5, rmv_unknowns=True, view="browser"
     ):
+        """
+        Plots a heatmap showing the co-occurrence frequency of top X and top Y entities.
+
+        For example, this can visualize how frequently top authors (Y) are associated
+        with top countries (X) in the dataset.
+
+        Args:
+            x (str): The entity type for the x-axis (e.g., "cout", "inst").
+            y (str): The entity type for the y-axis (e.g., "aut", "jou").
+            topn_x (int, optional): Number of top X entities to display. Defaults to 5.
+            topn_y (int, optional): Number of top Y entities to display. Defaults to 5.
+            rmv_unknowns (bool, optional): If True, "unknown" entities are excluded
+                                           from the co-occurrence count. Defaults to True.
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+
+        Sets Attributes:
+            self.heat_y_x (pd.DataFrame): DataFrame where rows are top Y entities,
+                                          columns are top X entities, and cell values
+                                          are lists of document IDs where the
+                                          pair co-occurs.
+
+        Displays:
+            A Plotly heatmap where cell color intensity and text indicate the
+            frequency of co-occurrence. Hovering shows document IDs.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         sk_data = pd.DataFrame(
@@ -6164,6 +7183,34 @@ class pbx_probe:
         rmv_unknowns=False,
         topn=None,
     ):
+        """
+        Generates and displays a Sankey diagram illustrating flows between entity types.
+
+        The diagram shows relationships (flows) between categories specified in `entry`.
+        For example, it can show how authors flow to countries, then to institutions.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            entry (list, optional): A list of entity types (column names from
+                                    `self.data` like "aut", "cout", "inst", "jou",
+                                    "kwa", "kwp", "lan") defining the stages of
+                                    the Sankey diagram.
+                                    Defaults to ["aut", "cout", "inst", "jou", "kwa", "kwp", "lan"].
+            rmv_unknowns (bool, optional): If True, "unknown" entities are excluded.
+                                           Defaults to False.
+            topn (list or None, optional): A list specifying the top N items to consider
+                                           at each level of the Sankey diagram.
+                                           The length of this list should be `len(entry) - 1`.
+                                           If None, all items are considered (can be very dense).
+                                           Defaults to None.
+
+        Sets Attributes:
+            self.ask_gpt_sk (pd.DataFrame): DataFrame with "Node From", "Node To",
+                                            and "Connection Weigth" for the Sankey links.
+
+        Displays:
+            A Plotly Sankey diagram.
+        """
         # ----------------------------------------------------------------------
 
         def count_entry(sk_data, entry):
@@ -6395,6 +7442,50 @@ class pbx_probe:
 
     # Function: E-Index
     def e_index(self):
+        """
+        Calculates the E-index for each unique author.
+
+        The E-index quantifies the excess citations for papers in the H-core
+        (the h papers that contribute to the H-index). It's the square root
+        of the sum of citations exceeding h for these h papers.
+
+        Returns:
+            list: A list of E-index values (float), corresponding to each
+                  author in `self.u_aut`.
+        """
+        """
+        Calculates the M-index (or M-quotient) for each unique author.
+
+        The M-index is defined as the H-index divided by the number of years
+        since the author's first publication.
+
+        Args:
+            current_year (int): The current year, used to calculate the career length.
+
+        Returns:
+            list: A list of M-index values, corresponding to each author in
+                  `self.u_aut`. Returns None for authors with no publication year data.
+        """
+        """
+        Calculates the G-index for each unique author in the dataset.
+
+        The G-index is the largest number g such that the top g publications
+        have a total of at least g^2 citations.
+
+        Returns:
+            list: A list of G-index values, corresponding to each author
+                  in `self.u_aut`.
+        """
+        """
+        Calculates the H-index for each unique author in the dataset.
+
+        The H-index is the largest number h such that h publications have at
+        least h citations.
+
+        Returns:
+            list: A list of H-index values, corresponding to each author
+                  in `self.u_aut`.
+        """
         researcher_to_citations = {researcher: [] for researcher in self.u_aut}
         for i, authors in enumerate(self.aut):
             for researcher in authors:
@@ -6424,6 +7515,19 @@ class pbx_probe:
 
     # Function: Total and Self Citations
     def __total_and_self_citations(self):
+        """
+        Calculates total citations and self-citations for each unique author.
+
+        Total citations are the sum of citations received by all papers authored
+        by the researcher.
+        Self-citations are counted when a paper authored by the researcher cites
+        another paper also authored by the same researcher (within the dataset).
+
+        Returns:
+            tuple[list, list]:
+                - t_c (list): List of total citation counts for each unique author.
+                - s_c (list): List of self-citation counts for each unique author.
+        """
         preprocessed_refs = [[ref.lower() for ref in refs] for refs in self.ref]
         t_c = []
         s_c = []
@@ -6605,6 +7709,16 @@ class pbx_probe:
 
     # Function: TF-IDF
     def dtm_tf_idf(self, corpus):
+        """
+        Creates a Document-Term Matrix (DTM) using TF-IDF weighting.
+
+        Args:
+            corpus (list): A list of text documents (strings).
+
+        Returns:
+            pd.DataFrame: A DataFrame where rows are documents, columns are terms (tokens),
+                          and cell values are the TF-IDF scores.
+        """
         vectorizer = TfidfVectorizer(norm="l2")
         tf_idf = vectorizer.fit_transform(corpus)
         try:
@@ -6639,6 +7753,62 @@ class pbx_probe:
         min_size=5,
         max_size=15,
     ):
+        """
+        Projects documents into a 2D space and optionally clusters them.
+
+        This function can use either TF-IDF followed by dimensionality reduction
+        (TSVD or UMAP) or pre-trained sentence embeddings followed by
+        dimensionality reduction. It then clusters the projected documents
+        using K-Means or HDBSCAN.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            corpus_type (str, optional): Type of text to use if `embeddings` is False
+                                         or `custom_projection` is not provided.
+                                         Options: "abs" (abstracts), "title",
+                                         "kwa" (author keywords), "kwp" (keywords plus).
+                                         Defaults to "abs".
+            stop_words (list, optional): Stop words for `clear_text` if `corpus_type`
+                                         is "abs" or "title". Defaults to ["en"].
+            rmv_custom_words (list, optional): Custom words to remove. Defaults to [].
+            custom_label (list, optional): Predefined cluster labels for documents.
+                                           If empty, clustering is performed. Defaults to [].
+            custom_projection (list or np.ndarray, optional): Pre-computed 2D document
+                                                               projections. If empty,
+                                                               projection is performed.
+                                                               Defaults to [].
+            n_components (int, optional): Number of components for dimensionality
+                                          reduction. Defaults to 2.
+            n_clusters (int, optional): Number of clusters for K-Means. Defaults to 5.
+            node_labels (bool, optional): Whether to display document IDs as node labels.
+                                          Defaults to True.
+            node_size (int, optional): Size of the markers in the plot. Defaults to 25.
+            node_font_size (int, optional): Font size for node labels. Defaults to 10.
+            tf_idf (bool, optional): If True and `embeddings` is False, use TF-IDF
+                                     representation before dimensionality reduction.
+                                     Defaults to True.
+            embeddings (bool, optional): If True, use sentence embeddings (specified by
+                                         `model`) for documents. Defaults to False.
+            method (str, optional): Dimensionality reduction method ("tsvd" or "umap").
+                                    Defaults to "tsvd".
+            model (str, optional): SentenceTransformer model name if `embeddings` is True.
+                                   Defaults to "allenai/scibert_scivocab_uncased".
+            showlegend (bool, optional): Whether to show the legend for clusters.
+                                         Defaults to False.
+            cluster_method (str, optional): Clustering algorithm ("kmeans" or "hdbscan").
+                                            Defaults to "kmeans".
+            min_size (int, optional): `min_cluster_size` for HDBSCAN. Defaults to 5.
+            max_size (int, optional): `max_cluster_size` for HDBSCAN (can be None).
+                                      Defaults to 15.
+
+        Returns:
+            tuple[np.ndarray, list]:
+                - transformed (np.ndarray): The 2D projected coordinates of the documents.
+                - labels (list): The cluster label assigned to each document.
+
+        Displays:
+            A Plotly scatter plot of the projected and clustered documents.
+        """
         if corpus_type == "abs":
             corpus = self.data["abstract"]
             corpus = corpus.tolist()
@@ -6793,6 +7963,26 @@ class pbx_probe:
 
     # Function: References Citations
     def ref_citation_matrix(self, tgt_ref_id=[], date_start=None, date_end=None):
+        """
+        Creates a matrix-like DataFrame detailing which articles cite which references.
+
+        Filters by target reference IDs and a date range for the citing articles.
+
+        Args:
+            tgt_ref_id (list, optional): A list of reference IDs to focus on.
+                                         If empty, all references are considered.
+                                         Defaults to [].
+            date_start (int, optional): Start year for citing articles. Defaults to None.
+            date_end (int, optional): End year for citing articles. Defaults to None.
+
+        Returns:
+            pd.DataFrame: A DataFrame with columns:
+                          - "Reference": The full reference string.
+                          - "Reference ID": The ID of the reference.
+                          - "Reference Year": Publication year of the reference.
+                          - "Citing Articles": A list of (article_idx, publication_year)
+                                               tuples for articles citing this reference.
+        """
         citation_records = []
         for article_idx, pub_year in enumerate(self.dy):
             year = int(pub_year)
@@ -6841,6 +8031,33 @@ class pbx_probe:
         date_start=None,
         date_end=None,
     ):
+        """
+        Plots a pie chart of the top N most cited references.
+
+        Citation counts are based on occurrences within the `self.ref` or `self.ref_id` lists.
+        Can be filtered by the publication year of the references.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            topn (int, optional): Number of top references to display. Defaults to 10.
+            font_size (int, optional): Font size for the legend. Defaults to 8.
+            use_ref_id (bool, optional): If True, uses `self.ref_id` (potentially
+                                         mapped to document IDs) for counting.
+                                         If False, uses raw reference strings `self.ref`.
+                                         Defaults to False.
+            date_start (int, optional): Filter references to include only those
+                                        published on or after this year. Defaults to None.
+            date_end (int, optional): Filter references to include only those
+                                      published on or before this year. Defaults to None.
+
+        Sets Attributes:
+            self.top_refs (pd.DataFrame): DataFrame with "Reference", "Reference ID",
+                                          "Reference Year", and "Raw Citation Counts"
+                                          for the top N references.
+
+        Displays:
+            A Plotly pie chart.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         all_refs_names = [r for refs in self.ref for r in refs if r != "UNKNOWN"]
@@ -6927,6 +8144,20 @@ class pbx_probe:
 
     # Function: Citation Trajectory
     def plot_citation_trajectory(self, view="browser", ref_names=[], ref_ids=[]):
+        """
+        Plots the citation trajectory (citations received per year) for selected references.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            ref_names (list, optional): A list of reference names (strings) to plot.
+                                        Used if `ref_ids` is empty. Defaults to [].
+            ref_ids (list, optional): A list of reference IDs to plot. Takes precedence
+                                      over `ref_names`. Defaults to [].
+
+        Displays:
+            A Plotly line chart showing citation counts over publication years for
+            the selected references.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         if ref_names:
@@ -7007,6 +8238,27 @@ class pbx_probe:
 
     # Function: RPYS (Reference Publication Year Spectroscopy) with Gaussian Filter to Find Peaks
     def plot_rpys(self, view="browser", peaks_only=False):
+        """
+        Plots the Reference Publication Year Spectroscopy (RPYS).
+
+        This shows the distribution of publication years of cited references.
+        A Gaussian filter is applied to smooth the counts, and peaks are identified.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            peaks_only (bool, optional): If True, only displays years that are
+                                         identified as peaks. Defaults to False.
+
+        Sets Attributes:
+            self.rpys_pk (pd.DataFrame): DataFrame of identified peak years and their
+                                         smoothed citation counts.
+            self.rpys_rs (pd.DataFrame): DataFrame with years, raw citation counts,
+                                         and smoothed citation counts for all references.
+
+        Displays:
+            A Plotly chart with bars for raw counts, a line for smoothed counts,
+            and markers for peaks. Includes a range slider for the x-axis (years).
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         publication_years = [item for item in self.dy_ref if item != -1]
@@ -7085,6 +8337,24 @@ class pbx_probe:
 
     # Function: Top Cited Co-References
     def top_cited_co_references(self, group=2, topn=10):
+        """
+        Identifies the top N most frequently co-cited groups of references.
+
+        Co-citation occurs when two or more references are cited together by the
+        same document in the dataset.
+
+        Args:
+            group (int, optional): The size of the co-citation group (e.g., 2 for pairs,
+                                   3 for triplets). Defaults to 2.
+            topn (int, optional): The number of top co-cited groups to return.
+                                  Defaults to 10.
+
+        Returns:
+            pd.DataFrame: A DataFrame with columns:
+                          - "Reference ID Sets": A tuple of sorted reference IDs
+                                                 in the co-cited group.
+                          - "Count": The number of times this group was co-cited.
+        """
         co_cited_groups = []
         for refs in self.ref_id:
             refs = list(set(refs))
@@ -7097,6 +8367,26 @@ class pbx_probe:
 
     # Function: Plot Co-Citation
     def plot_co_citation_network(self, view="browser", target_ref_id="", topn=10):
+        """
+        Plots a co-citation network centered around a target reference.
+
+        The network shows the target reference and the top N references that are
+        most frequently co-cited with it. Node size can reflect co-citation count.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            target_ref_id (str): The ID of the reference to be the center of the network.
+            topn (int, optional): The number of top co-cited references to display
+                                  around the target. Defaults to 10.
+
+        Sets Attributes:
+            self.top_co_c (pd.DataFrame): DataFrame with details of the top co-cited
+                                          references ("Reference ID", "Reference",
+                                          "Year", "Count").
+
+        Displays:
+            A Plotly network graph.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         citing_articles = [
@@ -7207,6 +8497,30 @@ class pbx_probe:
 
     # Function: Salsa (Stochastic Approximation for Local Search in Assignment Problems)
     def salsa(self, max_iter=150, tol=1e-6, topn_decade=5):
+        """
+        Performs SALSA (Stochastic Approximation for Local Search in Assignment Problems)
+        to calculate hub and authority scores for documents and references in the citation network.
+
+        This is an adaptation of the HITS algorithm. Hubs are documents that cite many
+        authoritative references. Authorities are references cited by many hub documents.
+
+        Args:
+            max_iter (int, optional): Maximum iterations for the algorithm. Defaults to 150.
+            tol (float, optional): Tolerance for convergence. Defaults to 1e-6.
+            topn_decade (int, optional): Number of top hubs/authorities to report per decade.
+                                         Defaults to 5.
+
+        Returns:
+            tuple:
+                - result (dict): Contains:
+                    - "hubs" (np.ndarray): Hub scores for all nodes.
+                    - "authorities" (np.ndarray): Authority scores for all nodes.
+                    - "node_ids" (list): List of all node IDs (documents and references).
+                    - "node_years" (list): Publication year for each node.
+                    - "year_aggregates" (dict): Mean hub/authority scores and counts per year.
+                - top_by_decade_a (dict): Top N authorities per decade {decade: [(id, score)]}.
+                - top_by_decade_h (dict): Top N hubs per decade {decade: [(id, score)]}.
+        """
         # ----------------------------------------------------------------------
 
         def build_hubs_authorities(
@@ -7424,6 +8738,52 @@ class pbx_probe:
 
     # Function: Detect Princes. Based on < https://doi.org/10.1007/s41109-021-00389-0 >
     def detect_princes(self, metrics):
+        """
+        Detects "Princes" associated with Sleeping Beauties.
+
+        A Prince is a paper that cites a Sleeping Beauty and is itself highly
+        co-cited with other papers that also cite the same Sleeping Beauty.
+        This method identifies the most likely Prince for each Sleeping Beauty
+        provided in the `metrics` DataFrame.
+        This implementation is based on the method described in the referenced DOI.
+
+        Args:
+            metrics (pd.DataFrame): A DataFrame of Sleeping Beauties, typically the
+                                    output of `detect_sleeping_beauties()`.
+                                    Must contain a "ref" column with Sleeping Beauty IDs.
+
+        Returns:
+            pd.DataFrame: A DataFrame with columns:
+                          - "SB_id": The ID of the Sleeping Beauty.
+                          - "PR_id": The ID of the identified Prince paper.
+                          - "PR_pub_year": Publication year of the Prince paper.
+                          - "co_citation_count": The number of times the Prince was
+                                                 co-cited by other citers of the SB.
+        """
+        """
+        Detects "Sleeping Beauties" in the bibliographic dataset.
+
+        Sleeping Beauties are papers that experience a delayed recognition,
+        i.e., a long period of low citations followed by a sudden surge.
+        This implementation is based on the method described in the referenced DOI.
+
+        Args:
+            topn (int, optional): Number of top Sleeping Beauties to return,
+                                  ranked by the 'B' metric. Defaults to 10.
+            min_count (int, optional): Minimum total citations a reference must have
+                                       to be considered. Defaults to 10.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the detected Sleeping Beauties
+                          and their metrics:
+                          - "ref": The reference ID.
+                          - "B": The "beauty" coefficient B. Higher is more "beautiful".
+                          - "SBI": Sleeping Beauty Index (B / sqrt((cm-c0)^2 + tm^2)).
+                          - "t_a": Awakening time (time to maximum deviation from linear growth).
+                          - "c0": Citations in the publication year.
+                          - "cm": Maximum citations in a single year.
+                          - "t_m": Time from publication to the year of maximum citations.
+        """
         results = []
         for _, row in metrics.iterrows():
             sb_id = row["ref"]
@@ -7607,6 +8967,83 @@ class pbx_probe:
 
     # Function: KWP Colaboration Adjacency Matrix
     def __adjacency_matrix_kwp(self, min_colab=1):
+        """
+        Creates an adjacency matrix for Keywords Plus co-occurrences.
+
+        Two Keywords Plus are linked if they appear in the same document.
+        The matrix is binary. "unknown" keywords are ignored.
+
+        Args:
+            min_colab (int, optional): Minimum co-occurrences for a Keyword Plus.
+                                       Defaults to 1.
+
+        Sets Attributes:
+            self.matrix_a (pd.DataFrame): Sparse adjacency matrix (Keywords Plus as index/columns).
+            self.labels_a (list): List of Keyword Plus IDs (e.g., "p_0", "p_1").
+            self.n_colab (list): Co-occurrence counts per Keyword Plus before `min_colab` filter.
+        """
+        """
+        Creates an adjacency matrix for author keyword co-occurrences.
+
+        Two author keywords are linked if they appear in the same document.
+        The matrix is binary. "unknown" keywords are ignored.
+
+        Args:
+            min_colab (int, optional): Minimum co-occurrences for a keyword. Defaults to 1.
+
+        Sets Attributes:
+            self.matrix_a (pd.DataFrame): Sparse adjacency matrix (keywords as index/columns).
+            self.labels_a (list): List of author keyword IDs (e.g., "k_0", "k_1").
+            self.n_colab (list): Co-occurrence counts per keyword before `min_colab` filter.
+        """
+        """
+        Creates an adjacency matrix for institution collaborations.
+
+        Two institutions collaborate if authors affiliated with them appear on the same paper.
+        The matrix is binary.
+
+        Args:
+            min_colab (int, optional): Minimum collaborations for an institution. Defaults to 1.
+
+        Sets Attributes:
+            self.matrix_a (pd.DataFrame): Sparse adjacency matrix (institution names as index/columns).
+            self.labels_a (list): List of institution IDs (e.g., "i_0", "i_1").
+            self.n_colab (list): Collaboration counts per institution before `min_colab` filter.
+        """
+        """
+        Creates an adjacency matrix for country collaborations.
+
+        Two countries are considered to collaborate if authors from these countries
+        appear on the same paper. The matrix is binary.
+
+        Args:
+            min_colab (int, optional): Minimum number of collaborations a country
+                                       must have to be included. Defaults to 1.
+
+        Sets Attributes:
+            self.matrix_a (pd.DataFrame): Sparse adjacency matrix (country names as index/columns).
+            self.labels_a (list): List of country IDs (e.g., "c_0", "c_1").
+            self.n_colab (list): Collaboration counts per country before `min_colab` filter.
+        """
+        """
+        Creates an adjacency matrix for author collaborations.
+
+        Two authors are considered to collaborate if they appear on the same paper.
+        The matrix is binary (0 or 1).
+
+        Args:
+            min_colab (int, optional): Minimum number of collaborations an author
+                                       must have to be included in the matrix.
+                                       Authors below this threshold will have all
+                                       their connections zeroed out. Defaults to 1.
+
+        Sets Attributes:
+            self.matrix_a (pd.DataFrame): Sparse DataFrame representing the adjacency matrix,
+                                          with author names as index and columns.
+            self.labels_a (list): List of author IDs (e.g., "a_0", "a_1").
+            self.n_colab (list): List of total collaboration counts for each author
+                                 before applying `min_colab` filter.
+        """
         tgt_entry = self.kid
         tgt_entry_u = self.u_kid
         item_to_idx = {tgt: idx for idx, tgt in enumerate(tgt_entry_u)}
@@ -7640,6 +9077,27 @@ class pbx_probe:
 
     # Function: References Adjacency Matrix
     def __adjacency_matrix_ref(self, min_cites=2, local_nodes=False):
+        """
+        Creates a document-reference adjacency matrix (citation matrix).
+
+        Rows represent citing documents, and columns represent cited references.
+        A cell (doc, ref) is 1 if the document cites the reference, 0 otherwise.
+
+        Args:
+            min_cites (int, optional): Minimum number of times a reference must be
+                                       cited to be included as a column. Defaults to 2.
+            local_nodes (bool, optional): If True, only include references that are
+                                          also documents within the dataset (i.e.,
+                                          references with non-"r_" prefixed IDs).
+                                          Defaults to False.
+
+        Sets Attributes:
+            self.matrix_r (pd.DataFrame): Sparse DataFrame of the citation matrix.
+                                          Rows are document indices, columns are reference IDs.
+            self.labels_r (list): List of reference IDs used as columns in `matrix_r`.
+            self.dict_lbs (dict): Dictionary mapping "r_X" IDs to internal document IDs
+                                  if a match was found during `__get_ref_id`.
+        """
         u_ref_map = {ref: idx for idx, ref in enumerate(self.u_ref)}
         num_rows = self.data.shape[0]
         num_cols = len(self.u_ref)
@@ -7716,6 +9174,37 @@ class pbx_probe:
 
     # Function: Make Matrix
     def make_matrix(self, entry="aut", min_count=0, local_nodes=False):
+        """
+        Creates and returns an adjacency matrix for the specified entry type.
+
+        This is a convenience wrapper around the specific `__adjacency_matrix_...`
+        methods.
+
+        Args:
+            entry (str, optional): The type of entity for which to create the
+                                   adjacency matrix. Options:
+                                   - "aut": Authors
+                                   - "cout": Countries
+                                   - "inst": Institutions
+                                   - "kwa": Author Keywords
+                                   - "kwp": Keywords Plus
+                                   - "ref": References (Document-Reference matrix)
+                                   Defaults to "aut".
+            min_count (int, optional): Minimum collaborations/co-occurrences/citations
+                                       for an entity/reference to be included.
+                                       Passed to the underlying `__adjacency_matrix_...` method.
+                                       Defaults to 0 for collaboration matrices,
+                                       and implicitly 2 for "ref" if not changed.
+            local_nodes (bool, optional): Applicable only if `entry` is "ref".
+                                          If True, filters references to those also
+                                          present as documents in the dataset.
+                                          Defaults to False.
+
+        Returns:
+            pd.DataFrame: The generated sparse adjacency matrix.
+                          - For collaboration/co-occurrence types, returns `self.matrix_a`.
+                          - For "ref", returns `self.matrix_r`.
+        """
         if entry == "aut":
             self.__adjacency_matrix_aut(min_count)
             return self.matrix_a
@@ -7754,6 +9243,43 @@ class pbx_probe:
         nd_c="#808080",
         verbose=False,
     ):
+        """
+        Visualizes collaboration or co-occurrence networks for selected entities.
+
+        For each target entity (or top N entities if `tgt` is empty),
+        it creates a subplot showing the target and its direct collaborators/co-occurrences.
+
+        Args:
+            entry (str, optional): Entity type for the network. Options:
+                                   "aut" (Authors), "cout" (Countries),
+                                   "inst" (Institutions), "kwa" (Author Keywords),
+                                   "kwp" (Keywords Plus). Defaults to "aut".
+            tgt (list, optional): Specific target entities to plot. If empty,
+                                  plots top N entities based on document count/occurrence.
+                                  Defaults to [].
+            topn (int, optional): Number of top entities to plot if `tgt` is empty.
+                                  Defaults to 15.
+            rows (int, optional): Number of rows in the subplot grid. Defaults to 5.
+            cols (int, optional): Number of columns in the subplot grid. Defaults to 3.
+            wspace (float, optional): Width space between subplots. Defaults to 0.2.
+            hspace (float, optional): Height space between subplots. Defaults to 0.2.
+            tspace (float, optional): Vertical space for label offset from node. Defaults to 0.01.
+            node_size (int, optional): Size of nodes in the network. Defaults to 300.
+            font_size (int, optional): Font size for node labels. Defaults to 8.
+            pad (float, optional): Padding for `plt.tight_layout()`. Defaults to 0.2.
+            nd_a (str, optional): Color for the target node. Defaults to "#FF0000" (red).
+            nd_b (str, optional): Color for connected nodes that are also in `tgt` (if len(tgt)>1).
+                                  Defaults to "#008000" (green).
+            nd_c (str, optional): Color for other connected nodes. Defaults to "#808080" (grey).
+            verbose (bool, optional): If True, prints main node and its links. Defaults to False.
+
+        Sets Attributes:
+            self.ask_gpt_ct (list): A list of lists, where each inner list contains
+                                    the target node and its connected nodes, for AI querying.
+
+        Displays:
+            A matplotlib figure with subplots of individual ego networks.
+        """
         if entry == "aut":
             self.__adjacency_matrix_aut(0)
             collab_data = self.matrix_a.copy(deep=True)
@@ -7855,6 +9381,37 @@ class pbx_probe:
         cut_coup=0.3,
         cut_cocit=5,
     ):
+        """
+        Visualizes a network of documents based on bibliographic coupling or co-citation.
+
+        - Bibliographic Coupling: Documents are linked if they cite common references.
+                                  Similarity is the cosine similarity of their reference lists.
+        - Co-citation: Documents are linked if they are cited together by other documents
+                       in the dataset. Similarity is the count of co-citations.
+
+        The network is colored by communities found using the Girvan-Newman algorithm.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            sim_type (str, optional): Type of similarity to use for network construction.
+                                      "coup" for bibliographic coupling,
+                                      "cocit" for co-citation. Defaults to "coup".
+            node_size (int, optional): Size of nodes. If -1, defaults are used
+                                       (17 for text, 10 for markers only). Defaults to -1.
+            node_labels (bool, optional): If True, displays document IDs as node labels.
+                                          Defaults to False.
+            cut_coup (float, optional): Minimum cosine similarity for bibliographic coupling
+                                        to draw an edge. Defaults to 0.3.
+            cut_cocit (int, optional): Minimum co-citation count to draw an edge.
+                                       Defaults to 5.
+
+        Sets Attributes:
+            self.sim_table (pd.DataFrame): Table of document pairs and their similarity scores.
+            self.ask_gpt_sim (pd.DataFrame): Formatted table of similarity data for AI querying.
+
+        Displays:
+            A Plotly network graph.
+        """
         sim = ""
         if sim_type == "coup":
             cut = cut_coup
@@ -8029,6 +9586,25 @@ class pbx_probe:
 
     # Function: Map from Country Adjacency Matrix
     def network_adj_map(self, view="browser", connections=True, country_lst=[]):
+        """
+        Visualizes country collaboration networks on a world map.
+
+        Nodes represent countries, sized by collaboration count. Edges represent
+        collaborations. Optionally highlights connections involving specified countries.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            connections (bool, optional): If True, draws lines for collaborations.
+                                          Defaults to True.
+            country_lst (list, optional): List of country names (case-insensitive)
+                                          to highlight their connections. Defaults to [].
+
+        Sets Attributes:
+            self.ask_gpt_map (pd.DataFrame): DataFrame of country pairs that collaborated.
+
+        Displays:
+            A Plotly choropleth map with network overlays.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         lat_ = [
@@ -8195,6 +9771,38 @@ class pbx_probe:
         node_labels=False,
         local_nodes=False,
     ):
+        """
+        Visualizes a direct citation network (documents citing references).
+
+        Nodes are documents (blue) and references (red). Edges go from citing
+        document to cited reference.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            min_count (int, optional): Minimum number of citations a reference must
+                                       receive to be included. Passed to
+                                       `__adjacency_matrix_ref`. Defaults to 1.
+            node_size (int, optional): Size of nodes. Defaults to -1 (uses defaults:
+                                       50 if `node_labels` is True, 10 otherwise).
+            font_size (int, optional): Font size for node labels. Defaults to 10.
+            node_labels (bool, optional): If True, displays node IDs as labels.
+                                          Defaults to False.
+            local_nodes (bool, optional): If True, only include references that are
+                                          also documents within the dataset. Passed to
+                                          `__adjacency_matrix_ref`. Defaults to False.
+
+        Sets Attributes:
+            self.ask_gpt_nad (pd.DataFrame): DataFrame of "Paper" and "Cited Reference" pairs.
+            self.pos (dict): Node positions from `nx.circular_layout`.
+            self.node_list (list): List of node IDs in the graph.
+            self.edge_list (list): List of edges in the graph.
+            self.nids_list (list): Formatted hover text for each node.
+            self.Xn, self.Yn (list): X and Y coordinates for nodes.
+            self.fig (go.Figure): The Plotly figure object.
+
+        Displays:
+            A Plotly network graph.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         if node_labels and node_size == -1:
@@ -8333,6 +9941,53 @@ class pbx_probe:
         label_type="id",
         centrality=None,
     ):
+        """
+        Visualizes a collaboration/co-occurrence network from an adjacency matrix.
+
+        This function first generates the appropriate adjacency matrix using
+        `__adjacency_matrix_...` methods. It then constructs and displays
+        a network graph where nodes are entities and edges represent
+        collaboration or co-occurrence. Nodes can be colored by community
+        (Girvan-Newman) or by a selected centrality measure.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            adj_type (str, optional): Type of adjacency matrix/network to create.
+                                      Options: "aut" (Authors), "cout" (Countries),
+                                      "inst" (Institutions), "kwa" (Author Keywords),
+                                      "kwp" (Keywords Plus). Defaults to "aut".
+            min_count (int, optional): Minimum collaborations/co-occurrences for an
+                                       entity to be included. Passed to the
+                                       `__adjacency_matrix_...` method. Defaults to 2.
+            node_size (int, optional): Size of nodes. If -1, defaults are used
+                                       (17 for text, 10 for markers only). Defaults to -1.
+            font_size (int, optional): Font size for node labels. Defaults to 10.
+            node_labels (bool, optional): If True, displays node labels. Defaults to False.
+            label_type (str, optional): Type of label to display if `node_labels` is True.
+                                        "id" for prefixed IDs (e.g., "a_0"),
+                                        otherwise uses the actual entity name.
+                                        Defaults to "id".
+            centrality (str, optional): If specified, colors nodes by this centrality
+                                        measure. Options: "degree", "load", "betw"
+                                        (betweenness), "close" (closeness), "eigen"
+                                        (eigenvector), "katz", "harmonic". If None,
+                                        colors by community. Defaults to None.
+
+        Sets Attributes:
+            self.H (nx.Graph): The NetworkX graph object.
+            self.table_centr (pd.DataFrame): If `centrality` is specified, this table
+                                             stores node centrality values.
+            self.pos_a (dict): Node positions from `nx.spring_layout`.
+            self.node_list_a (list): List of node IDs in the graph.
+            self.edge_list_a (list): List of edges in the graph.
+            self.ask_gpt_adj (pd.DataFrame): Formatted table of edge data for AI querying.
+            self.nids_list_a (list): Formatted hover text for each node.
+            self.Xv, self.Yv (list): X and Y coordinates for nodes.
+            self.fig_a (go.Figure): The Plotly figure object.
+
+        Displays:
+            A Plotly network graph.
+        """
         adj_ = ""
         cen_ = "Girvan-Newman Community Algorithm"
         if view == "browser":
@@ -8968,6 +10623,52 @@ class pbx_probe:
     def find_nodes(
         self, node_ids=[], node_name=[], node_size=-1, font_size=10, node_only=False
     ):
+        """
+        Highlights specified nodes and optionally their direct connections in a collaboration/co-occurrence network.
+
+        This function assumes `network_adj` has been called previously to generate
+        `self.fig_a`. It then adds highlights to this existing figure.
+
+        Args:
+            node_ids (list, optional): List of node IDs (e.g., "a_0", "c_1") to highlight.
+                                       Used if `node_name` is empty or fails to resolve.
+                                       Defaults to [].
+            node_name (list, optional): List of actual entity names (e.g., author name,
+                                        country name) to highlight. The method will try
+                                        to find their corresponding IDs. Defaults to [].
+            node_size (int, optional): Size for the highlighted nodes. If -1,
+                                       defaults to 17. Defaults to -1.
+            font_size (int, optional): Font size for labels of highlighted nodes.
+                                       Defaults to 10.
+            node_only (bool, optional): If True, only highlights the specified nodes.
+                                        If False, also highlights their direct connections
+                                        and connected nodes. Defaults to False.
+
+        Displays:
+            The modified Plotly figure (`self.fig_a`) with highlighted nodes and connections.
+        """
+        """
+        Highlights specified nodes and their direct connections in the direct citation network.
+
+        This function assumes `network_adj_dir` has been called previously to generate
+        `self.fig`. It then adds annotations and highlights to this existing figure.
+
+        Args:
+            view (str, optional): Plotly rendering mode (though not directly used to create
+                                  a new figure, it's kept for consistency).
+                                  Defaults to "browser".
+            article_ids (list, optional): List of document IDs (citing articles) to highlight.
+                                          Defaults to [].
+            ref_ids (list, optional): List of reference IDs (cited items) to highlight.
+                                      Defaults to [].
+            node_size (int, optional): Size for the highlighted nodes. If -1,
+                                       defaults to 50. Defaults to -1.
+            font_size (int, optional): Font size for labels of highlighted nodes.
+                                       Defaults to 10.
+
+        Displays:
+            The modified Plotly figure (`self.fig`) with highlighted nodes and connections.
+        """
         flag = False
         if len(node_ids) == 0 and len(node_name) > 0:
             if node_name[0] in self.dict_aut_id.keys():
@@ -9104,6 +10805,44 @@ class pbx_probe:
         node_labels=True,
         dist=1.2,
     ):
+        """
+        Visualizes the citation history network (main path analysis).
+
+        Nodes represent documents, arranged by publication year on the x-axis.
+        Edges represent citations. Can highlight specific citation chains or paths.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            min_links (int, optional): Minimum number of citations a document must have
+                                       (either citing or cited by within the local dataset)
+                                       to be included in the initial graph. Defaults to 0.
+            chain (list, optional): A list of document IDs (strings) representing a
+                                    specific citation chain or path to highlight.
+                                    Defaults to [].
+            path (bool, optional): If True and `chain` is provided, only highlights
+                                   direct connections within the chain. If False,
+                                   highlights the chain nodes and all their 1st-degree neighbors.
+                                   Defaults to True.
+            node_size (int, optional): Size of nodes in the plot. Defaults to 20.
+            font_size (int, optional): Font size for node labels if `node_labels` is True.
+                                     Defaults to 10. (Note: textfont_color is hardcoded to "yellow")
+            node_labels (bool, optional): If True, displays document IDs as node labels.
+                                          Defaults to True.
+            dist (float, optional): Vertical distance factor for offsetting nodes
+                                    published in the same year. Defaults to 1.2.
+
+        Sets Attributes:
+            self.ask_gpt_hist (pd.DataFrame): DataFrame of "Paper ID (Year)" and
+                                              "Reference ID (Year)" for AI querying.
+
+        Returns:
+            list: A list of tuples representing the citation links in the final graph,
+                  filtered by `min_links` and the logic involving `chain`.
+                  Each tuple is (citing_document_id, cited_document_id).
+
+        Displays:
+            A Plotly network graph.
+        """
         # ----------------------------------------------------------------------
 
         def filter_matrix_by_citations(matrix_r, min_links):
@@ -9399,6 +11138,24 @@ class pbx_probe:
 
     # Function: Analyze Citations
     def analyze_hist_citations(self, citations, min_path_size=2):
+        """
+        Analyzes a list of citations to find key papers and citation paths.
+
+        Args:
+            citations (list): A list of (citing_document_id, cited_document_id) tuples,
+                              typically the output of `network_hist()`.
+            min_path_size (int, optional): Minimum length for a citation path to be
+                                           considered. Defaults to 2.
+
+        Prints:
+            - The ID of the most referenced paper and its in-degree.
+            - The ID of the paper that cites the most other papers and its out-degree.
+            - The paper IDs forming the longest citation path found (if any).
+
+        Returns:
+            list: A list of the longest unique citation paths found, sorted by length
+                  in descending order. Each path is a list of document IDs.
+        """
         G = nx.DiGraph(citations)
         most_referenced_paper = max(G.in_degree, key=lambda x: x[1], default=(None, 0))
         most_citing_paper = max(G.out_degree, key=lambda x: x[1], default=(None, 0))
@@ -9448,6 +11205,29 @@ class pbx_probe:
         corpus_type="abs",
         model="allenai/scibert_scivocab_uncased",
     ):
+        """
+        Generates sentence embeddings for a specified corpus using a SentenceTransformer model.
+
+        The resulting embeddings are stored in `self.embds`.
+
+        Args:
+            stop_words (list, optional): List of language codes for stopword removal if
+                                         `corpus_type` is "abs" or "title". Defaults to ["en"].
+            rmv_custom_words (list, optional): Custom words to remove if `corpus_type`
+                                               is "abs" or "title". Defaults to [].
+            corpus_type (str, optional): The type of text data to use. Options:
+                                         - "abs": Abstracts (cleaned)
+                                         - "title": Titles (cleaned)
+                                         - "kwa": Author Keywords (raw)
+                                         - "kwp": Keywords Plus (raw)
+                                         Defaults to "abs".
+            model (str, optional): The name of the SentenceTransformer model to use.
+                                   Defaults to "allenai/scibert_scivocab_uncased".
+
+        Sets Attributes:
+            self.embds (np.ndarray): A 2D NumPy array where each row is the embedding
+                                     for a document/text in the corpus.
+        """
         model = SentenceTransformer(model)
         if corpus_type == "abs":
             corpus = self.data["abstract"]
@@ -9492,6 +11272,33 @@ class pbx_probe:
         embeddings=False,
         model="allenai/scibert_scivocab_uncased",
     ):
+        """
+        Performs topic modeling on document abstracts using BERTopic.
+
+        Cleans abstracts, then fits a BERTopic model. Can use pre-computed
+        embeddings or generate them using a specified SentenceTransformer model.
+
+        Args:
+            stop_words (list, optional): Stop words for cleaning abstracts. Defaults to ["en"].
+            rmv_custom_words (list, optional): Custom words to remove. Defaults to [].
+            embeddings (bool, optional): If True, uses the specified `model` to generate
+                                         sentence embeddings for BERTopic. If False,
+                                         BERTopic uses its default internal embedding.
+                                         Defaults to False.
+            model (str, optional): SentenceTransformer model name if `embeddings` is True.
+                                   Defaults to "allenai/scibert_scivocab_uncased".
+
+        Sets Attributes:
+            self.topic_model (bertopic.BERTopic): The fitted BERTopic model.
+            self.topic_corpus (list): The cleaned list of abstracts used for modeling.
+            self.topics (list): List of topic assignments for each document.
+            self.probs (np.ndarray): Probabilities of topic assignments for each document.
+            self.topic_info (pd.DataFrame): DataFrame with information about each topic
+                                           (ID, count, name, representative docs, etc.).
+
+        Prints:
+            The `self.topic_info` DataFrame.
+        """
         umap_model = UMAP(
             n_neighbors=15,
             n_components=5,
@@ -9527,6 +11334,26 @@ class pbx_probe:
 
     # Function: Topics - Load
     def topics_load_file(self, saved_file="my_topic_model"):
+        """
+        Loads a previously saved BERTopic model.
+
+        Also re-processes the abstracts from the current dataset to ensure
+        `self.topic_corpus` is consistent.
+
+        Args:
+            saved_file (str, optional): The path to the saved BERTopic model file.
+                                        Defaults to "my_topic_model".
+
+        Sets Attributes:
+            self.topic_model (bertopic.BERTopic): The loaded BERTopic model.
+            self.topic_corpus (list): Cleaned abstracts from the current dataset.
+            self.topics (list): Topic assignments from the loaded model.
+            self.probs (np.ndarray): Topic probabilities from the loaded model.
+            self.topic_info (pd.DataFrame): Topic information from the loaded model.
+
+        Prints:
+            The `self.topic_info` DataFrame.
+        """
         self.topic_model = BERTopic.load(saved_file)
         self.topic_corpus = self.clear_text(
             self.data["abstract"],
@@ -9538,6 +11365,30 @@ class pbx_probe:
             rmv_custom_words=[],
             verbose=False,
         )
+        """
+        Cleans a list of text strings (corpus) by performing various operations.
+
+        Operations include lowercasing, removing special characters, stop words,
+        custom words, accents, and numbers.
+
+        Args:
+            corpus (list): A list of strings to be cleaned.
+            stop_words (list, optional): List of language codes (e.g., "en", "es")
+                                         for stopword removal. Uses predefined stopword
+                                         lists from `pybibx.base.stws`. Defaults to ["en"].
+            lowercase (bool, optional): Convert text to lowercase. Defaults to True.
+            rmv_accents (bool, optional): Remove accents from characters. Defaults to True.
+            rmv_special_chars (bool, optional): Remove non-alphanumeric characters
+                                                (except apostrophes). Defaults to True.
+            rmv_numbers (bool, optional): Remove numeric digits. Defaults to True.
+            rmv_custom_words (list, optional): A list of custom words to remove.
+                                               Defaults to [].
+            verbose (bool, optional): If True, prints progress messages for each step.
+                                      Defaults to False.
+
+        Returns:
+            list: The list of cleaned text strings.
+        """
         self.topics = self.topic_model.topics_
         self.probs = self.topic_model.probabilities_
         self.topic_info = self.topic_model.get_topic_info()
@@ -9546,6 +11397,19 @@ class pbx_probe:
 
     # Function: Topics - Main Representatives
     def topics_representatives(self):
+        """
+        Identifies representative documents for each topic.
+
+        Uses the `get_representative_docs()` method of the BERTopic model.
+
+        Sets Attributes:
+            self.df_rep (pd.DataFrame): DataFrame with columns "Topic" (topic ID)
+                                        and "Docs" (a semicolon-separated string
+                                        of document indices representing that topic).
+
+        Returns:
+            pd.DataFrame: The `self.df_rep` DataFrame.
+        """
         docs = [[] for _ in range(0, self.topic_info.shape[0])]
         papers = self.topic_model.get_representative_docs()
         self.df_rep = pd.DataFrame(
@@ -9562,6 +11426,22 @@ class pbx_probe:
 
     # Function: Topics - Reduce
     def topics_reduction(self, topicsn=3):
+        """
+        Reduces the number of topics in the BERTopic model.
+
+        Args:
+            topicsn (int, optional): The desired number of topics after reduction.
+                                     Note: BERTopic reduces to `topicsn-1` if it's
+                                     not an outlier topic. Defaults to 3.
+
+        Sets Attributes:
+            self.topics (list): Updated topic assignments.
+            self.probs (np.ndarray): Updated topic probabilities.
+            self.topic_info (pd.DataFrame): Updated topic information.
+
+        Prints:
+            The updated `self.topic_info` DataFrame.
+        """
         self.topics, self.probs = self.topic_model.reduce_topics(
             docs=self.topic_corpus, nr_topics=topicsn - 1
         )
@@ -9795,6 +11675,69 @@ class pbx_probe:
 
     # Function:  Graph Topics - Topics Over Time
     def graph_topics_time(self, view="browser"):
+        """
+        Visualizes the frequency of topics over time.
+
+        Uses the BERTopic model's `topics_over_time` method to calculate
+        topic frequencies for different time bins (years).
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+
+        Displays:
+            A Plotly line chart showing the frequency of each topic across years.
+        """
+        """
+        Visualizes the similarity between topics as a heatmap.
+
+        Calculates cosine similarity between topic embeddings (c-TF-IDF vectors).
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+
+        Displays:
+            A Plotly heatmap showing topic-topic similarities.
+        """
+        """
+        Visualizes topics in a 2D projected space.
+
+        Topic embeddings (derived from c-TF-IDF) are reduced to 2D using
+        TSVD or UMAP. Each topic is represented as a marker, sized by the
+        number of documents in that topic.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            method (str, optional): Dimensionality reduction method ("tsvd" or "umap").
+                                    Defaults to "tsvd".
+
+        Displays:
+            A Plotly scatter plot of topics in 2D space.
+        """
+        """
+        Visualizes the distribution of documents across topics as a bar chart.
+
+        Each bar represents a topic, and its height indicates the number of
+        documents assigned to that topic. Hovering over a bar shows the
+        top words for that topic.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+
+        Displays:
+            A Plotly bar chart.
+        """
+        """
+        Visualizes the top words for each topic as horizontal bar charts.
+
+        Creates a grid of subplots, where each subplot displays the words and
+        their scores for a single topic.
+
+        Args:
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+
+        Displays:
+            A Plotly figure with multiple bar chart subplots.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         idx = self.data["year"] != -1
@@ -9831,6 +11774,24 @@ class pbx_probe:
 
     # Function: Topics - Doc Words Distribution
     def topics_words(self, doc_id=0):
+        """
+        Visualizes the approximate word distribution for topics within a specific document.
+
+        Uses BERTopic's `approximate_distribution` and
+        `visualize_approximate_distribution` methods.
+
+        Args:
+            doc_id (int, optional): The index of the document in `self.data`
+                                    for which to visualize topic word distributions.
+                                    Defaults to 0.
+
+        Returns:
+            pd.DataFrame: A DataFrame where columns are topics (e.g., "Topic 0", "Topic 1")
+                          and index represents words. Cell values are scores/probabilities
+                          of words belonging to topics within that document.
+                          The exact nature of the DataFrame is determined by BERTopic's
+                          `visualize_approximate_distribution`.
+        """
         abstracts = self.data["abstract"]
         topic, token = self.topic_model.approximate_distribution(
             abstracts, calculate_tokens=True
@@ -9847,6 +11808,21 @@ class pbx_probe:
 
     # Function: Topics - Topics Collab
     def topics_authors(self, topn=15):
+        """
+        Analyzes the distribution of topics for the top N authors.
+
+        Identifies the top N authors by document count and then, for each of these
+        authors, counts how many of their documents fall into each identified topic.
+
+        Args:
+            topn (int, optional): Number of top authors to analyze. Defaults to 15.
+
+        Returns:
+            pd.DataFrame: A DataFrame where rows are the top N authors, columns are
+                          the topic IDs (and a "Total" column), and cell values are
+                          the number of documents by that author assigned to that topic.
+                          The DataFrame is sorted by the "Total" document count per author.
+        """
         self.__adjacency_matrix_aut(0)
         collab_data = self.matrix_a.copy(deep=True)
         collab_data = collab_data.reset_index(drop=True)
@@ -9892,6 +11868,32 @@ class pbx_probe:
         min_count=1,
         epochs=10,
     ):
+        """
+        Trains a FastText word embedding model on the abstracts of the dataset.
+
+        The abstracts are first cleaned using `self.clear_text`.
+
+        Args:
+            stop_words (list, optional): Stop words for text cleaning. Defaults to ["en"].
+            lowercase (bool, optional): Convert text to lowercase. Defaults to True.
+            rmv_accents (bool, optional): Remove accents. Defaults to True.
+            rmv_special_chars (bool, optional): Remove special characters. Defaults to False.
+            rmv_numbers (bool, optional): Remove numbers. Defaults to True.
+            rmv_custom_words (list, optional): Custom words to remove. Defaults to [].
+            vector_size (int, optional): Dimensionality of word vectors. Defaults to 100.
+            window (int, optional): Context window size for FastText. Defaults to 5.
+            min_count (int, optional): Minimum word frequency to be included. Defaults to 1.
+            epochs (int, optional): Number of training epochs for FastText. Defaults to 10.
+
+        Returns:
+            tuple:
+                - model (gensim.models.FastText): The trained FastText model.
+                - corpus (list): The tokenized and cleaned corpus (list of lists of words).
+                - w_emb (list): Embeddings for words in the first document's abstract
+                                (if words are in model vocab). (Note: This seems specific
+                                and might not be the most general useful return).
+                - vocab (list): The vocabulary of the trained model (list of words).
+        """
         # ----------------------------------------------------------------------
 
         def tokenize(text):
@@ -9925,6 +11927,19 @@ class pbx_probe:
 
     # Function: Find Documents that have the Target Words
     def word_embeddings_find_doc(self, corpus, target_words=[]):
+        """
+        Finds documents (original abstracts) that contain all specified target words.
+
+        Args:
+            corpus (list): A list of tokenized documents (list of lists of words),
+                           typically the output from `word_embeddings`.
+            target_words (list, optional): A list of words to search for.
+                                           Defaults to [].
+
+        Returns:
+            list: A list of tuples, where each tuple is (document_index, original_abstract_string).
+                  Document index refers to the position in the original `self.data`.
+        """
         results = []
         i = -1
         original = self.data["abstract"].tolist()
@@ -9936,11 +11951,39 @@ class pbx_probe:
 
     # Function: Words Similarity
     def word_embeddings_sim(self, model, word_1="", word_2=""):
+        """
+        Calculates the cosine similarity between two words using a trained FastText model.
+
+        Args:
+            model (gensim.models.FastText): The trained FastText model.
+            word_1 (str, optional): The first word. Defaults to "".
+            word_2 (str, optional): The second word. Defaults to "".
+
+        Returns:
+            float: The cosine similarity score between the two words.
+                   Returns an error if words are not in the model's vocabulary.
+        """
         similarity = model.wv.similarity(word_1, word_2)
         return similarity
 
     # Function: Words Operations
     def word_embeddings_operations(self, model, positive=[], negative=[], topn=10):
+        """
+        Performs word analogy tasks (e.g., "king - man + woman = queen") using a trained model.
+
+        Finds words that are most similar to the words in `positive` and dissimilar
+        to the words in `negative`.
+
+        Args:
+            model (gensim.models.FastText): The trained FastText model.
+            positive (list, optional): List of words to add. Defaults to [].
+            negative (list, optional): List of words to subtract. Defaults to [].
+            topn (int, optional): Number of top similar words to return. Defaults to 10.
+
+        Returns:
+            list: A list of (word, similarity_score) tuples for the top N results.
+                  Returns an error if words are not in the model's vocabulary.
+        """
         result = model.wv.most_similar(positive=positive, negative=negative, topn=topn)
         return result
 
@@ -9955,6 +11998,32 @@ class pbx_probe:
         node_size=10,
         font_size=14,
     ):
+        """
+        Plots word embeddings in 2D space using UMAP for dimensionality reduction.
+
+        Visualizes the relationships between words based on specified positive/negative
+        queries and their most similar words from the model.
+
+        Args:
+            model (gensim.models.FastText): The trained FastText model.
+            view (str, optional): Plotly rendering mode. Defaults to "browser".
+            positive (list of lists, optional): A list where each inner list contains
+                                                positive query words for a group.
+                                                Must be same length as `negative`.
+                                                Defaults to [].
+            negative (list of lists, optional): A list where each inner list contains
+                                                negative query words for a group.
+                                                Must be same length as `positive`.
+                                                Defaults to [].
+            topn (int, optional): Number of most similar words to retrieve for each query.
+                                  Defaults to 5.
+            node_size (int, optional): Size of markers in the plot. Defaults to 10.
+            font_size (int, optional): Font size for legend items. Defaults to 14.
+
+        Displays:
+            A Plotly scatter plot showing words in 2D, colored by their query group.
+            Prints a warning if any query words are not in the model's vocabulary.
+        """
         if view == "browser":
             pio.renderers.default = "browser"
         all_words = []
@@ -10071,6 +12140,28 @@ class pbx_probe:
     def summarize_abst_peg(
         self, article_ids=[], model_name="google/pegasus-xsum", min_L=100, max_L=150
     ):
+        """
+        Performs abstractive text summarization using a Pegasus model from Hugging Face.
+
+        Summarizes the abstracts of specified articles.
+
+        Args:
+            article_ids (list, optional): List of document IDs whose abstracts
+                                          should be summarized. If empty, attempts
+                                          to summarize all valid abstracts.
+                                          Defaults to [].
+            model_name (str, optional): Name of the Pegasus model to use
+                                        (e.g., "google/pegasus-xsum").
+                                        Defaults to "google/pegasus-xsum".
+            min_L (int, optional): Minimum length of the generated summary.
+                                   Defaults to 100.
+            max_L (int, optional): Maximum length of the generated summary.
+                                   Defaults to 150.
+
+        Returns:
+            str: The generated summary. Returns a message if no valid abstracts
+                 are found for the selected articles.
+        """
         abstracts = self.data["abstract"]
         corpus = []
         if len(article_ids) == 0:
@@ -10105,6 +12196,19 @@ class pbx_probe:
 
     # Function: Check Version
     def version_check(self, major, minor, patch):
+        """
+        Checks if the installed OpenAI library version meets a minimum requirement.
+
+        Args:
+            major (int): Required major version.
+            minor (int): Required minor version.
+            patch (int): Required patch version.
+
+        Returns:
+            bool: True if the installed version is greater than or equal to the
+                  required version, False otherwise. Also False if `openai.__version__`
+                  is not found.
+        """
         try:
             version = openai.__version__
             major_v, minor_v, patch_v = [int(v) for v in version.split(".")]
@@ -10117,6 +12221,24 @@ class pbx_probe:
 
     # Function: Query
     def query_chatgpt(self, prompt, model, max_tokens, n, temperature, flag, api_key):
+        """
+        Sends a query to OpenAI's ChatGPT (or older completion models) and returns the response.
+
+        Handles both the newer ChatCompletion API (if `flag` indicates version >= 1.0.0)
+        and the older Completion API.
+
+        Args:
+            prompt (str): The prompt to send to the model.
+            model (str): The OpenAI model ID (e.g., "gpt-3.5-turbo", "text-davinci-003").
+            max_tokens (int): Maximum number of tokens to generate.
+            n (int): Number of completions to generate (for older Completion API).
+            temperature (float): Sampling temperature.
+            flag (int): 0 for older API (before 1.0.0), 1 for newer API.
+            api_key (str): OpenAI API key.
+
+        Returns:
+            str: The model's generated text response.
+        """
         if flag == 0:
             try:
                 response = openai.ChatCompletion.create(
@@ -10219,6 +12341,30 @@ class pbx_probe:
         query="from the following scientific abstracts, summarize the main information in a single paragraph using around 250 words",
         model_name="gemini-1.5-flash",
     ):
+        """
+        Performs abstractive text summarization using a Google Gemini model.
+
+        Collects abstracts of specified articles, formats a prompt, and sends
+        it to the Google Generative AI API.
+
+        Args:
+            article_ids (list, optional): Document IDs for abstracts to summarize.
+                                          If empty, all valid abstracts are used.
+                                          Defaults to [].
+            join_articles (bool, optional): If True, all selected abstracts are
+                                            concatenated. If False, implies summarizing
+                                            each (though current code joins them).
+                                            Defaults to False.
+            api_key (str, optional): Google Generative AI API key.
+                                     Defaults to "your_api_key_here".
+            query (str, optional): The instruction for the summarization task.
+                                   Defaults to a generic summarization prompt.
+            model_name (str, optional): Gemini model name.
+                                        Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The generated summary. Returns a message if no valid abstracts are found.
+        """
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(model_name)
         abstracts = self.data["abstract"]
@@ -10248,6 +12394,21 @@ class pbx_probe:
 
     # Function: Extractive Text Summarization
     def summarize_ext_bert(self, article_ids=[]):
+        """
+        Performs extractive text summarization using a BERT-based model.
+
+        Utilizes the `Summarizer` library (bert-extractive-summarizer).
+        Concatenates abstracts of specified articles and extracts key sentences.
+
+        Args:
+            article_ids (list, optional): List of document IDs whose abstracts
+                                          should be summarized. If empty, all
+                                          valid abstracts are used. Defaults to [].
+
+        Returns:
+            str: The generated extractive summary. Returns a message if no
+                 valid abstracts are found.
+        """
         abstracts = self.data["abstract"]
         corpus = []
         if len(article_ids) == 0:
@@ -10282,6 +12443,34 @@ class pbx_probe:
         temperature=0.8,
         entry="aut",
     ):
+        """
+        Queries OpenAI's GPT model for insights on productivity data.
+
+        This function takes pre-formatted productivity data (authors, countries,
+        institutions, or sources per year) stored in attributes like `self.ask_gpt_ap`,
+        `self.ask_gpt_cp`, etc., constructs a prompt, and queries the specified
+        OpenAI model.
+
+        Args:
+            char_limit (int, optional): Maximum character limit for the prompt.
+                                        Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): The base query/instruction for the GPT model.
+                                   Defaults to a generic insight request.
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for the response. Defaults to 2000.
+            n (int, optional): Number of completions (for older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+            entry (str, optional): Specifies which productivity data to use:
+                                   "aut" (authors, from `self.ask_gpt_ap`),
+                                   "cout" (countries, from `self.ask_gpt_cp`),
+                                   "inst" (institutions, from `self.ask_gpt_ip`),
+                                   "jou" (sources, from `self.ask_gpt_sp`).
+                                   Defaults to "aut".
+
+        Returns:
+            str: The GPT model's textual analysis/insights.
+        """
         flag = 0
         os.environ["OPENAI_KEY"] = api_key
         corpus = ""
@@ -10656,6 +12845,247 @@ class pbx_probe:
         n=1,
         temperature=0.8,
     ):
+        """
+        Queries OpenAI's GPT model for insights on collaboration network data.
+
+        Uses `self.ask_gpt_ct` (list of [target_node, [connected_nodes]] from
+        `network_collab`) to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for GPT. Defaults to a specific network collab query.
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for response. Defaults to 2000.
+            n (int, optional): Number of completions (older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The GPT model's textual analysis of the collaboration network data.
+        """
+        """
+        Queries OpenAI's GPT model for insights on word cloud data.
+
+        Uses `self.ask_gpt_wd` (dictionary from `word_cloud_plot` with word frequencies)
+        to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for GPT. Defaults to "give me insights...".
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for response. Defaults to 2000.
+            n (int, optional): Number of completions (older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The GPT model's textual analysis of the word cloud data.
+        """
+        """
+        Queries OpenAI's GPT model for insights on document similarity data.
+
+        Uses `self.ask_gpt_sim` (DataFrame from `network_sim` with "Node 1",
+        "Node 2", "Simimilarity (...) Between Nodes") to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for GPT. Defaults to "give me insights...".
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for response. Defaults to 2000.
+            n (int, optional): Number of completions (older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The GPT model's textual analysis of the similarity data.
+        """
+        """
+        Queries OpenAI's GPT model for insights on Sankey diagram data.
+
+        Uses `self.ask_gpt_sk` (DataFrame from `sankey_diagram` with "Node From",
+        "Node To", "Connection Weigth") to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for GPT. Defaults to a specific Sankey query.
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for response. Defaults to 2000.
+            n (int, optional): Number of completions (older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The GPT model's textual analysis of the Sankey data.
+        """
+        """
+        Queries OpenAI's GPT model for insights on N-gram frequency data.
+
+        Uses `self.ask_gpt_ng` (DataFrame from `get_top_ngrams` with "Word"
+        and "Freq") to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for GPT. Defaults to a specific N-gram query.
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for response. Defaults to 2000.
+            n (int, optional): Number of completions (older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The GPT model's textual analysis of the N-gram data.
+        """
+        """
+        Queries OpenAI's GPT model for insights on country collaboration map data.
+
+        Uses `self.ask_gpt_map` (DataFrame from `network_adj_map` showing
+        collaborating country pairs) to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for GPT. Defaults to "give me insights...".
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for response. Defaults to 2000.
+            n (int, optional): Number of completions (older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The GPT model's textual analysis of the map data.
+        """
+        """
+        Queries OpenAI's GPT model for insights on historical citation links.
+
+        Uses `self.ask_gpt_hist` (DataFrame from `network_hist` showing
+        "Paper ID (Year)" citing "Reference ID (Year)") to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for GPT. Defaults to a specific citation history query.
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for response. Defaults to 2000.
+            n (int, optional): Number of completions (older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The GPT model's textual analysis of the citation history.
+        """
+        """
+        Queries OpenAI's GPT model for insights on keyword/term evolution data.
+
+        Uses `self.ask_gpt_ep` (string summary from `plot_evolution_year`)
+        to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for GPT. Defaults to a specific evolution query.
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for response. Defaults to 2000.
+            n (int, optional): Number of completions (older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The GPT model's textual analysis of the evolution data.
+        """
+        """
+        Queries OpenAI's GPT model for insights on the EDA report.
+
+        Uses `self.ask_gpt_rt` (DataFrame from `eda_bib`) to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for GPT. Defaults to "give me insights...".
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for response. Defaults to 2000.
+            n (int, optional): Number of completions (older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The GPT model's textual analysis of the EDA report.
+        """
+        """
+        Queries OpenAI's GPT model for insights on collaboration network data.
+
+        Uses `self.ask_gpt_adj` (DataFrame from `network_adj` containing
+        node pairs and their cluster/centrality info) to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for GPT. Defaults to a specific network insight query.
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for response. Defaults to 2000.
+            n (int, optional): Number of completions (older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The GPT model's textual analysis.
+        """
+        """
+        Queries OpenAI's GPT model for insights on citation network data.
+
+        Uses `self.ask_gpt_nad` (DataFrame from `network_adj_dir` containing
+        paper-reference pairs) to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for GPT. Defaults to "give me insights...".
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for response. Defaults to 2000.
+            n (int, optional): Number of completions (older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The GPT model's textual analysis.
+        """
+        """
+        Queries OpenAI's GPT model for insights on data used in bar plots.
+
+        Uses `self.ask_gpt_bp` (DataFrame from `plot_bars`) and `self.ask_gpt_bp_t`
+        (title from `plot_bars`) to construct a prompt for the GPT model.
+
+        Args:
+            char_limit (int, optional): Max character limit for the prompt. Defaults to 4097.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for GPT. Defaults to "give me insights...".
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for response. Defaults to 2000.
+            n (int, optional): Number of completions (older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The GPT model's textual analysis.
+        """
+        """
+        Performs abstractive text summarization using an OpenAI GPT model.
+
+        Collects abstracts of specified articles, formats a prompt with the
+        provided query, and sends it to the OpenAI API.
+
+        Args:
+            article_ids (list, optional): Document IDs for abstracts to summarize.
+                                          If empty, all valid abstracts are used.
+                                          Defaults to [].
+            join_articles (bool, optional): If True, all selected abstracts are
+                                            concatenated into a single prompt.
+                                            If False (not fully implemented as distinct calls),
+                                            it implies summarizing each abstract (though current
+                                            code joins them). Defaults to False.
+            api_key (str, optional): OpenAI API key. Defaults to "your_api_key_here".
+            query (str, optional): The instruction/query for the summarization task.
+                                   Defaults to a generic summarization prompt.
+            model (str, optional): OpenAI model ID. Defaults to "text-davinci-003".
+            max_tokens (int, optional): Max tokens for the summary. Defaults to 250.
+            n (int, optional): Number of completions (for older API). Defaults to 1.
+            temperature (float, optional): Sampling temperature. Defaults to 0.8.
+
+        Returns:
+            str: The generated summary. Returns a message if no valid abstracts are found.
+        """
         flag = 0
         os.environ["OPENAI_KEY"] = api_key
         corpus = []
@@ -10689,6 +13119,32 @@ class pbx_probe:
         model="gemini-1.5-flash",
         entry="aut",
     ):
+        """
+        Queries Google's Gemini model for insights on productivity data.
+
+        Similar to `ask_chatgpt_ap`, this function uses pre-formatted productivity
+        data stored in attributes like `self.ask_gpt_ap` to construct a prompt
+        and query the specified Gemini model.
+
+        Args:
+            char_limit (int, optional): Maximum character limit for the prompt.
+                                        Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key.
+                                     Defaults to "your_api_key_here".
+            query (str, optional): The base query/instruction for the Gemini model.
+                                   Defaults to a generic insight request.
+            model (str, optional): Gemini model ID (e.g., "gemini-1.5-flash").
+                                   Defaults to "gemini-1.5-flash".
+            entry (str, optional): Specifies which productivity data to use:
+                                   "aut" (authors, from `self.ask_gpt_ap`),
+                                   "cout" (countries, from `self.ask_gpt_cp`),
+                                   "inst" (institutions, from `self.ask_gpt_ip`),
+                                   "jou" (sources, from `self.ask_gpt_sp`).
+                                   Defaults to "aut".
+
+        Returns:
+            str: The Gemini model's textual analysis/insights.
+        """
         genai.configure(api_key=api_key)
         gem = genai.GenerativeModel(model)
         corpus = ""
@@ -10943,6 +13399,185 @@ class pbx_probe:
         query="give me insights about the following information, the main nodes represent key entities, and the links indicate their direct connections or relationships",
         model="gemini-1.5-flash",
     ):
+        """
+        Queries Google's Gemini model for insights on collaboration network data.
+
+        Uses `self.ask_gpt_ct` (list of [target_node, [connected_nodes]] from
+        `network_collab`) to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for Gemini. Defaults to a specific network collab query.
+            model (str, optional): Gemini model ID. Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The Gemini model's textual analysis of the collaboration network data.
+        """
+        """
+        Queries Google's Gemini model for insights on word cloud data.
+
+        Uses `self.ask_gpt_wd` (dictionary from `word_cloud_plot` with word frequencies)
+        to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for Gemini. Defaults to "give me insights...".
+            model (str, optional): Gemini model ID. Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The Gemini model's textual analysis of the word cloud data.
+        """
+        """
+        Queries Google's Gemini model for insights on document similarity data.
+
+        Uses `self.ask_gpt_sim` (DataFrame from `network_sim` with "Node 1",
+        "Node 2", "Simimilarity (...) Between Nodes") to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for Gemini. Defaults to "give me insights...".
+            model (str, optional): Gemini model ID. Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The Gemini model's textual analysis of the similarity data.
+        """
+        """
+        Queries Google's Gemini model for insights on Sankey diagram data.
+
+        Uses `self.ask_gpt_sk` (DataFrame from `sankey_diagram` with "Node From",
+        "Node To", "Connection Weigth") to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for Gemini. Defaults to a specific Sankey query.
+            model (str, optional): Gemini model ID. Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The Gemini model's textual analysis of the Sankey data.
+        """
+        """
+        Queries Google's Gemini model for insights on N-gram frequency data.
+
+        Uses `self.ask_gpt_ng` (DataFrame from `get_top_ngrams` with "Word"
+        and "Freq") to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for Gemini. Defaults to a specific N-gram query.
+            model (str, optional): Gemini model ID. Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The Gemini model's textual analysis of the N-gram data.
+        """
+        """
+        Queries Google's Gemini model for insights on country collaboration map data.
+
+        Uses `self.ask_gpt_map` (DataFrame from `network_adj_map` showing
+        collaborating country pairs) to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for Gemini. Defaults to "give me insights...".
+            model (str, optional): Gemini model ID. Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The Gemini model's textual analysis of the map data.
+        """
+        """
+        Queries Google's Gemini model for insights on historical citation links.
+
+        Uses `self.ask_gpt_hist` (DataFrame from `network_hist` showing
+        "Paper ID (Year)" citing "Reference ID (Year)") to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for Gemini. Defaults to a specific citation history query.
+            model (str, optional): Gemini model ID. Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The Gemini model's textual analysis of the citation history.
+        """
+        """
+        Queries Google's Gemini model for insights on keyword/term evolution data.
+
+        Uses `self.ask_gpt_ep` (string summary from `plot_evolution_year`)
+        to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for Gemini. Defaults to a specific evolution query.
+            model (str, optional): Gemini model ID. Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The Gemini model's textual analysis of the evolution data.
+        """
+        """
+        Queries Google's Gemini model for insights on the EDA report.
+
+        Uses `self.ask_gpt_rt` (DataFrame from `eda_bib`) to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for Gemini. Defaults to "give me insights...".
+            model (str, optional): Gemini model ID. Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The Gemini model's textual analysis of the EDA report.
+        """
+        """
+        Queries Google's Gemini model for insights on collaboration network data.
+
+        Uses `self.ask_gpt_adj` (DataFrame from `network_adj` containing
+        node pairs and their cluster/centrality info) to construct a prompt.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for Gemini. Defaults to a specific network insight query.
+            model (str, optional): Gemini model ID. Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The Gemini model's textual analysis.
+        """
+        """
+        Queries Google's Gemini model for insights on citation network data.
+
+        Uses `self.ask_gpt_nad` (DataFrame from `network_adj_dir` containing
+        paper-reference pairs) to construct a prompt for the Gemini model.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for Gemini. Defaults to "give me insights...".
+            model (str, optional): Gemini model ID. Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The Gemini model's textual analysis.
+        """
+        """
+        Queries Google's Gemini model for insights on data used in bar plots.
+
+        Uses `self.ask_gpt_bp` (DataFrame from `plot_bars`) and `self.ask_gpt_bp_t`
+        (title from `plot_bars`) to construct a prompt for the Gemini model.
+
+        Args:
+            char_limit (int, optional): Max char limit for prompt. Defaults to 4097.
+            api_key (str, optional): Google Generative AI API key. Defaults to "your_api_key_here".
+            query (str, optional): Base query for Gemini. Defaults to "give me insights...".
+            model (str, optional): Gemini model ID. Defaults to "gemini-1.5-flash".
+
+        Returns:
+            str: The Gemini model's textual analysis.
+        """
         genai.configure(api_key=api_key)
         gem = genai.GenerativeModel(model)
         corpus = []
