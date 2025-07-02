@@ -13,34 +13,36 @@
 ############################################################################
 
 # Required Libraries
+import os
+import re
+import textwrap
+import unicodedata
+
 import chardet
 import google.generativeai as genai
 import networkx as nx
 import numpy as np
 import openai
-import os
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.subplots as ps
 import plotly.io as pio
-import re
-import unicodedata
-import textwrap
+import plotly.subplots as ps
 
 try:
     import importlib.resources as pkg_resources
 except ImportError:
     import importlib_resources as pkg_resources
-from . import stws
-
-from bertopic import BERTopic
 from collections import Counter, defaultdict
 from difflib import SequenceMatcher
+from itertools import combinations
+
+from bertopic import BERTopic
 
 # from keybert import KeyBERT
 from gensim.models import FastText
-from itertools import combinations
 from matplotlib import pyplot as plt
+
+from . import stws
 
 plt.style.use("bmh")
 from numba import njit
@@ -49,17 +51,14 @@ from numba.typed import List
 # from rapidfuzz import fuzz
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import find_peaks
-from scipy.sparse import coo_matrix
-from scipy.sparse import csr_matrix
+from scipy.sparse import coo_matrix, csr_matrix
 from sentence_transformers import SentenceTransformer
-from sklearn.cluster import KMeans, HDBSCAN
+from sklearn.cluster import HDBSCAN, KMeans
 from sklearn.decomposition import TruncatedSVD as tsvd
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from summarizer import Summarizer
-from transformers import PegasusForConditionalGeneration
-from transformers import PegasusTokenizer
+from transformers import PegasusForConditionalGeneration, PegasusTokenizer
 from umap import UMAP
 from wordcloud import WordCloud
 
@@ -2967,7 +2966,7 @@ class pbx_probe:
         self.u_ref = [ref for ref in self.u_ref if ref.lower() != "unknown"]
         self.dy_ref = self.__get_ref_year()
         self.u_ref_id = self.__get_ref_id()
-        ref_map = dict(zip(self.u_ref, self.u_ref_id))
+        ref_map = dict(zip(self.u_ref, self.u_ref_id, strict=False))
         self.ref_id = []
         for ref_list in self.ref:
             r_id = [ref_map.get(ref, ref) for ref in ref_list]
@@ -3001,69 +3000,69 @@ class pbx_probe:
             for i in range(0, self.data.shape[0])
         ]
         self.table_id_doc = pd.DataFrame(
-            zip(doc_list, docs), columns=["ID", "Document"]
+            zip(doc_list, docs, strict=False), columns=["ID", "Document"]
         )
-        self.dict_id_doc = dict(zip(doc_list, docs))
+        self.dict_id_doc = dict(zip(doc_list, docs, strict=False))
         return
 
     # Function: Author ID
     def __id_author(self):
         aut_list = ["a_" + str(i) for i in range(0, len(self.u_aut))]
         self.table_id_aut = pd.DataFrame(
-            zip(aut_list, self.u_aut), columns=["ID", "Author"]
+            zip(aut_list, self.u_aut, strict=False), columns=["ID", "Author"]
         )
-        self.dict_id_aut = dict(zip(aut_list, self.u_aut))
-        self.dict_aut_id = dict(zip(self.u_aut, aut_list))
+        self.dict_id_aut = dict(zip(aut_list, self.u_aut, strict=False))
+        self.dict_aut_id = dict(zip(self.u_aut, aut_list, strict=False))
         return
 
     # Function: Source ID
     def __id_source(self):
         jou_list = ["j_" + str(i) for i in range(0, len(self.u_jou))]
         self.table_id_jou = pd.DataFrame(
-            zip(jou_list, self.u_jou), columns=["ID", "Source"]
+            zip(jou_list, self.u_jou, strict=False), columns=["ID", "Source"]
         )
-        self.dict_id_jou = dict(zip(jou_list, self.u_jou))
-        self.dict_jou_id = dict(zip(self.u_jou, jou_list))
+        self.dict_id_jou = dict(zip(jou_list, self.u_jou, strict=False))
+        self.dict_jou_id = dict(zip(self.u_jou, jou_list, strict=False))
         return
 
     # Function: Institution ID
     def __id_institution(self):
         uni_list = ["i_" + str(i) for i in range(0, len(self.u_uni))]
         self.table_id_uni = pd.DataFrame(
-            zip(uni_list, self.u_uni), columns=["ID", "Institution"]
+            zip(uni_list, self.u_uni, strict=False), columns=["ID", "Institution"]
         )
-        self.dict_id_uni = dict(zip(uni_list, self.u_uni))
-        self.dict_uni_id = dict(zip(self.u_uni, uni_list))
+        self.dict_id_uni = dict(zip(uni_list, self.u_uni, strict=False))
+        self.dict_uni_id = dict(zip(self.u_uni, uni_list, strict=False))
         return
 
     # Function: Country ID
     def __id_country(self):
         ctr_list = ["c_" + str(i) for i in range(0, len(self.u_ctr))]
         self.table_id_ctr = pd.DataFrame(
-            zip(ctr_list, self.u_ctr), columns=["ID", "Country"]
+            zip(ctr_list, self.u_ctr, strict=False), columns=["ID", "Country"]
         )
-        self.dict_id_ctr = dict(zip(ctr_list, self.u_ctr))
-        self.dict_ctr_id = dict(zip(self.u_ctr, ctr_list))
+        self.dict_id_ctr = dict(zip(ctr_list, self.u_ctr, strict=False))
+        self.dict_ctr_id = dict(zip(self.u_ctr, ctr_list, strict=False))
         return
 
     # Function: Authors' Keyword ID
     def __id_kwa(self):
         kwa_list = ["k_" + str(i) for i in range(0, len(self.u_auk))]
         self.table_id_kwa = pd.DataFrame(
-            zip(kwa_list, self.u_auk), columns=["ID", "KWA"]
+            zip(kwa_list, self.u_auk, strict=False), columns=["ID", "KWA"]
         )
-        self.dict_id_kwa = dict(zip(kwa_list, self.u_auk))
-        self.dict_kwa_id = dict(zip(self.u_auk, kwa_list))
+        self.dict_id_kwa = dict(zip(kwa_list, self.u_auk, strict=False))
+        self.dict_kwa_id = dict(zip(self.u_auk, kwa_list, strict=False))
         return
 
     # Function: Keywords Plus ID
     def __id_kwp(self):
         kwp_list = ["p_" + str(i) for i in range(0, len(self.u_kid))]
         self.table_id_kwp = pd.DataFrame(
-            zip(kwp_list, self.u_kid), columns=["ID", "KWP"]
+            zip(kwp_list, self.u_kid, strict=False), columns=["ID", "KWP"]
         )
-        self.dict_id_kwp = dict(zip(kwp_list, self.u_kid))
-        self.dict_kwp_id = dict(zip(self.u_kid, kwp_list))
+        self.dict_id_kwp = dict(zip(kwp_list, self.u_kid, strict=False))
+        self.dict_kwp_id = dict(zip(self.u_kid, kwp_list, strict=False))
         return
 
     # Function: ID types
@@ -3574,7 +3573,7 @@ class pbx_probe:
                 correspondence_address1
             )
             new_affiliations = []
-            for ca_author, ca_aff in zip(ca_authors, ca_affiliations):
+            for ca_author, ca_aff in zip(ca_authors, ca_affiliations, strict=False):
                 new_affiliations.append(f"{ca_author} {ca_aff}")
             for ca_aff in ca_affiliations:
                 affiliations = [
@@ -3967,7 +3966,7 @@ class pbx_probe:
                     labels.append(item)
             labels.sort()
             values = [i for i in range(0, len(labels))]
-            labels_dict = dict(zip(labels, values))
+            labels_dict = dict(zip(labels, values, strict=False))
             data = pd.DataFrame(index=range(0, doc), columns=labels)
             count = -1
             for i in range(0, len(rhs)):
@@ -4321,11 +4320,11 @@ class pbx_probe:
         title_to_index = {df.iloc[i, 1].lower(): i for i in range(df.shape[0])}
         for j, refs in enumerate(ref_lower):
             for ref in refs:
-                for title, idx in title_to_index.items():
+                for title, _idx in title_to_index.items():
                     if title in ref:
                         c_count[j] = c_count[j] + 1
-        year_to_count = {year: 0 for year in sorted(set(c_year))}
-        for year, count in zip(c_year, c_count):
+        year_to_count = dict.fromkeys(sorted(set(c_year)), 0)
+        for year, count in zip(c_year, c_count, strict=False):
             year_to_count[year] = year_to_count[year] + count
         c_year_ = list(year_to_count.keys())
         c_count_ = list(year_to_count.values())
@@ -4351,7 +4350,7 @@ class pbx_probe:
                     unique_countries.add(country)
             u_ctr = list(unique_countries)
             ctr = []
-            for index, row in self.data.iterrows():
+            for index, _row in self.data.iterrows():
                 row_countries = []
                 for author in self.aut[index]:
                     if author in self.author_country_map:
@@ -4543,7 +4542,7 @@ class pbx_probe:
         u_inst = [re.sub(r"^(?:[A-Za-z]\.\s?)+", "", name) for name in u_inst]
         u_inst = list(set(u_inst))
         self.author_inst_map = {author: [] for author in self.u_aut}
-        for index, institutions in enumerate(inst):
+        for index, _institutions in enumerate(inst):
             for author in self.aut[index]:
                 for institution in inst[index]:
                     for _, aff in enumerate(processed_affiliations[index].split(";")):
@@ -4557,7 +4556,7 @@ class pbx_probe:
             k: list(set(v)) for k, v in self.author_inst_map.items()
         }
         inst = []
-        for index, row in self.data.iterrows():
+        for index, _row in self.data.iterrows():
             row_inst = []
             for author in self.aut[index]:
                 if author in self.author_inst_map:
@@ -4603,7 +4602,7 @@ class pbx_probe:
                             self.author_inst_map[corresponding_author]
                         )
         self.frst_a_inst_map = {}
-        for index, row in self.data.iterrows():
+        for index, _row in self.data.iterrows():
             if self.aut[index]:
                 first_author = self.aut[index][0]
                 if first_author in self.author_inst_map:
@@ -4719,7 +4718,7 @@ class pbx_probe:
                     insd_t.append(str(i))
                     self.dy_ref[j] = int(self.dy[i])
                     break
-        dict_lbs = dict(zip(insd_r, insd_t))
+        dict_lbs = dict(zip(insd_r, insd_t, strict=False))
         dict_lbs.update({label: label for label in labels_r if label not in dict_lbs})
         labels_r = [dict_lbs.get(label, label) for label in labels_r]
         return labels_r
@@ -4972,7 +4971,7 @@ class pbx_probe:
         if topn > len(self.u_aut):
             topn = len(self.u_aut)
         years = list(range(self.date_str, self.date_end + 1))
-        dicty = dict(zip(years, list(range(0, len(years)))))
+        dicty = dict(zip(years, list(range(0, len(years))), strict=False))
         idx = sorted(range(0, len(self.doc_aut)), key=self.doc_aut.__getitem__)
         idx.reverse()
         key = [self.u_aut[i] for i in idx]
@@ -5228,7 +5227,7 @@ class pbx_probe:
         if topn > len(self.u_uni):
             topn = len(self.u_uni)
         years = list(range(self.date_str, self.date_end + 1))
-        dicty = dict(zip(years, list(range(0, len(years)))))
+        dicty = dict(zip(years, list(range(0, len(years))), strict=False))
         idx = sorted(range(0, len(self.uni_count)), key=self.uni_count.__getitem__)
         idx.reverse()
         key = [self.u_uni[i] for i in idx]
@@ -5347,7 +5346,7 @@ class pbx_probe:
         if topn > len(self.u_jou):
             topn = len(self.u_jou)
         years = list(range(self.date_str, self.date_end + 1))
-        dicty = dict(zip(years, list(range(0, len(years)))))
+        dicty = dict(zip(years, list(range(0, len(years))), strict=False))
         idx = sorted(range(0, len(self.jou_count)), key=self.jou_count.__getitem__)
         idx.reverse()
         key = [self.u_jou[i] for i in idx]
@@ -5548,7 +5547,7 @@ class pbx_probe:
             u_ent, ent = u_tit, tit_
         traces = []
         years = list(range(self.date_str, self.date_end + 1))
-        dict_y = dict(zip(years, list(range(0, len(years)))))
+        dict_y = dict(zip(years, list(range(0, len(years))), strict=False))
         themes = self.__get_counts_year(u_ent, ent)
         self.ask_gpt_ep = ""
         for j in range(dict_y[start], dict_y[end] + 1):
@@ -5597,7 +5596,7 @@ class pbx_probe:
         year_entries = re.split(r"(\d{4}):", input_text)[1:]
         years = year_entries[::2]
         entries = year_entries[1::2]
-        for year, entry in zip(years, entries):
+        for year, entry in zip(years, entries, strict=False):
             items = re.findall(r"([^,]+?)\s\((\d+)\)", entry)
             for keyword, count in items:
                 data[year.strip()][keyword.strip()] = int(count)
@@ -5686,10 +5685,10 @@ class pbx_probe:
             key = [key[i] for i in idx]
             value = [value[i] for i in idx]
             accumulator = defaultdict(int)
-            for k, v in zip(key, value):
+            for k, v in zip(key, value, strict=False):
                 accumulator[k] = accumulator[k] + v
             combined = sorted(accumulator.items(), key=lambda x: x[0])
-            key, value = zip(*combined)
+            key, value = zip(*combined, strict=False)
             key = [item for item in key]
             value = [item for item in value]
             title = "Lotka's Law"
@@ -5888,7 +5887,7 @@ class pbx_probe:
             title = "Top " + str(topn) + " - Authors' Keywords per Documents"
             x_lbl = "Documents"
             y_lbl = "Authors' Keywords"
-        data_tuples = list(zip(key, value))
+        data_tuples = list(zip(key, value, strict=False))
         self.ask_gpt_bp = pd.DataFrame(data_tuples, columns=[x_lbl, y_lbl])
         self.ask_gpt_bp_t = title
         fig = go.Figure()
@@ -5951,7 +5950,7 @@ class pbx_probe:
             for _, row in sk_data.iterrows():
                 sources, targets = row[source_col], row[target_col]
                 if len(sources) == len(targets):
-                    pairs = list(zip(sources, targets))
+                    pairs = list(zip(sources, targets, strict=False))
                 else:
                     pairs = [(s, t) for s in sources for t in targets]
                 updated_pairs = []
@@ -6024,7 +6023,7 @@ class pbx_probe:
             "Keywords_Plus",
             "Languages",
         ]
-        dict_n = dict(zip(u_keys, u_name))
+        dict_n = dict(zip(u_keys, u_name, strict=False))
         fig = go.Figure()
         for _, row in top_y_df.iterrows():
             y_text = f"{row['Y']} ({row['Count']})"
@@ -6040,7 +6039,7 @@ class pbx_probe:
                 )
             )
         fig.update_layout(
-            title=f"Distribution of {str(dict_n[y])} per {str(dict_n[x])}",
+            title=f"Distribution of {dict_n[y]!s} per {dict_n[x]!s}",
             xaxis_title=str(dict_n[x]),
             yaxis_title=str(dict_n[y]),
             barmode="stack",
@@ -6085,7 +6084,7 @@ class pbx_probe:
             x_counter[xi] += len(id_list)
         top_x = [xi for xi, _ in x_counter.most_common(topn_x)]
         y_counter = Counter()
-        for (xi, yi), id_list in pair_to_ids.items():
+        for (_xi, yi), id_list in pair_to_ids.items():
             y_counter[yi] += len(id_list)
         top_y = [yi for yi, _ in y_counter.most_common(topn_y)]
         matrix_ids = []
@@ -6212,7 +6211,7 @@ class pbx_probe:
                 target_col = entry[i + 1]
                 current_relationships = relationships[i]
                 filtered_current_level = []
-                for source, targets in prev_level_data.items():
+                for _source, targets in prev_level_data.items():
                     for target in targets:
                         possible_next_targets = [
                             new_target
@@ -6268,14 +6267,14 @@ class pbx_probe:
                 updated_counter[(source, target)] = all_pairs.count((source, target))
             all_relationships[(source_col, target_col)] = updated_counter
         nodes = set()
-        for (source_col, target_col), counter in all_relationships.items():
-            for (source, target), count in counter.items():
+        for (_source_col, _target_col), counter in all_relationships.items():
+            for (source, target), _count in counter.items():
                 nodes.add(source)
                 nodes.add(target)
         node_to_index = {node: idx for idx, node in enumerate(nodes)}
         sk_s, sk_t, sk_v = [], [], []
         s, t, v = [], [], []
-        for (source_col, target_col), counter in all_relationships.items():
+        for (_source_col, _target_col), counter in all_relationships.items():
             for (source, target), count in counter.items():
                 sk_s.append(node_to_index[source])
                 sk_t.append(node_to_index[target])
@@ -6284,7 +6283,8 @@ class pbx_probe:
                 t.append(target)
                 v.append(count)
         self.ask_gpt_sk = pd.DataFrame(
-            list(zip(s, t, v)), columns=["Node From", "Node To", "Connection Weigth"]
+            list(zip(s, t, v, strict=False)),
+            columns=["Node From", "Node To", "Connection Weigth"],
         )
         u_keys = ["aut", "cout", "inst", "jou", "kwa", "kwp", "lan"]
         u_name = [
@@ -6296,7 +6296,7 @@ class pbx_probe:
             "Keywords_Plus",
             "Languages",
         ]
-        dict_n = dict(zip(u_keys, u_name))
+        dict_n = dict(zip(u_keys, u_name, strict=False))
         if len(sk_s) > len(self.color_names):
             count = 0
             while len(self.color_names) < len(sk_s):
@@ -6412,7 +6412,7 @@ class pbx_probe:
                         except:
                             pass
         e_indices = []
-        for researcher, h in zip(self.u_aut, self.aut_h):
+        for researcher, h in zip(self.u_aut, self.aut_h, strict=False):
             citations = researcher_to_citations[researcher]
             citations.sort(reverse=True)
             excess_sum = 0
@@ -6468,7 +6468,7 @@ class pbx_probe:
         if lowercase:
             if verbose:
                 print("Lower Case: Working...")
-            corpus = [str(x).lower().replace("’", "'") for x in corpus]
+            corpus = [str(x).lower().replace("'", "'") for x in corpus]
             if verbose:
                 print("Lower Case: Done!")
         if rmv_special_chars:
@@ -6805,7 +6805,7 @@ class pbx_probe:
                 continue
             ref_names = self.ref[article_idx]
             ref_ids = self.ref_id[article_idx]
-            for ref_name, ref_id in zip(ref_names, ref_ids):
+            for ref_name, ref_id in zip(ref_names, ref_ids, strict=False):
                 if ref_name.lower() == "unknown":
                     continue
                 if tgt_ref_id and ref_id not in tgt_ref_id:
@@ -6828,7 +6828,7 @@ class pbx_probe:
             )
             .reset_index()
         )
-        ref_year_dict = dict(zip(self.u_ref, self.dy_ref))
+        ref_year_dict = dict(zip(self.u_ref, self.dy_ref, strict=False))
         result_df["Reference Year"] = result_df["Reference"].map(ref_year_dict)
         return result_df[
             ["Reference", "Reference ID", "Reference Year", "Citing Articles"]
@@ -6848,8 +6848,12 @@ class pbx_probe:
             pio.renderers.default = "browser"
         all_refs_names = [r for refs in self.ref for r in refs if r != "UNKNOWN"]
         all_refs_ids = [r for refs in self.ref_id for r in refs if r != "UNKNOWN"]
-        ref_year_names = {ref: year for ref, year in zip(self.u_ref, self.dy_ref)}
-        ref_year_ids = {ref: year for ref, year in zip(self.u_ref_id, self.dy_ref)}
+        ref_year_names = {
+            ref: year for ref, year in zip(self.u_ref, self.dy_ref, strict=False)
+        }
+        ref_year_ids = {
+            ref: year for ref, year in zip(self.u_ref_id, self.dy_ref, strict=False)
+        }
         if not use_ref_id:
             ref_year_dict = ref_year_names
             all_refs = all_refs_names
@@ -6882,9 +6886,9 @@ class pbx_probe:
         ref_counter_ids = Counter(filtered_all_refs_ids)
         top_refs_ids = ref_counter_ids.most_common(topn)
         if top_refs:
-            labels, values = zip(*top_refs)
-            labels_n, _ = zip(*top_refs_names)
-            labels_i, _ = zip(*top_refs_ids)
+            labels, values = zip(*top_refs, strict=False)
+            labels_n, _ = zip(*top_refs_names, strict=False)
+            labels_i, _ = zip(*top_refs_ids, strict=False)
         else:
             labels, values = [], []
             labels_n = []
@@ -6941,9 +6945,7 @@ class pbx_probe:
         valid_years = [int(year) for year in self.dy if year != -1]
         min_year, max_year = min(valid_years), max(valid_years)
         x_range = list(range(min_year, max_year + 1))
-        citation_trajectory = {
-            ref: {year: 0 for year in x_range} for ref in selected_refs
-        }
+        citation_trajectory = {ref: dict.fromkeys(x_range, 0) for ref in selected_refs}
         for i, pub_year in enumerate(self.dy):
             if pub_year == -1:
                 continue
@@ -7215,7 +7217,7 @@ class pbx_probe:
         def build_hubs_authorities(
             A, hubs, authorities, out_degrees, in_degrees, max_iter, tol
         ):
-            for it in range(0, max_iter):
+            for _it in range(0, max_iter):
                 old_hubs = hubs.copy()
                 old_auth = authorities.copy()
                 factor1 = np.divide(
@@ -7351,9 +7353,7 @@ class pbx_probe:
         valid_years = [int(year) for year in self.dy if year != -1]
         min_year, max_year = min(valid_years), max(valid_years)
         x_range = list(range(min_year, max_year + 1))
-        citation_trajectory = {
-            ref: {year: 0 for year in x_range} for ref in self.u_ref_id
-        }
+        citation_trajectory = {ref: dict.fromkeys(x_range, 0) for ref in self.u_ref_id}
         for i, pub_year in enumerate(self.dy):
             if pub_year == -1:
                 continue
@@ -7396,13 +7396,13 @@ class pbx_probe:
                 return ((cm - c0) / t_m) * t + c0
 
             B = 0.0
-            for t, c in zip(t_values, citations):
+            for t, c in zip(t_values, citations, strict=False):
                 if t > t_m:
                     break
                 B = B + (L(t) - c) / max(1, c)
             denom = np.sqrt((cm - c0) ** 2 + t_m**2)
             d_values = []
-            for t, c in zip(t_values, citations):
+            for t, c in zip(t_values, citations, strict=False):
                 if t > t_m:
                     break
                 d = abs((cm - c0) * t - t_m * c + t_m * c0) / np.maximum(1, denom)
@@ -7699,7 +7699,7 @@ class pbx_probe:
                     insd_t.append(str(i))
                     self.dy_ref[j] = int(self.dy[i])
                     break
-        self.dict_lbs = dict(zip(insd_r, insd_t))
+        self.dict_lbs = dict(zip(insd_r, insd_t, strict=False))
         self.dict_lbs.update(
             {label: label for label in self.labels_r if label not in self.dict_lbs}
         )
@@ -7899,7 +7899,7 @@ class pbx_probe:
         adjacency_matrix = np.triu(adjacency_matrix, k=1)
         S = nx.Graph()
         rows, cols = np.where(adjacency_matrix >= cut)
-        edges = list(zip(rows.tolist(), cols.tolist()))
+        edges = list(zip(rows.tolist(), cols.tolist(), strict=False))
         u_rows = list(set(rows.tolist()))
         u_rows = [str(item) for item in u_rows]
         u_rows = sorted(u_rows, key=self.natsort)
@@ -8070,7 +8070,7 @@ class pbx_probe:
         text = [text[i] for i in range(0, len(vals)) if vals[i] > 0]
         vals = [vals[i] for i in range(0, len(vals)) if vals[i] > 0]
         rows, cols = np.where(adjacency_matrix >= 1)
-        edges = list(zip(rows.tolist(), cols.tolist()))
+        edges = list(zip(rows.tolist(), cols.tolist(), strict=False))
         try:
             unk = int(self.dict_ctr_id["UNKNOWN"].replace("c_", ""))
             edges = list(filter(lambda edge: unk not in edge, edges))
@@ -8102,7 +8102,7 @@ class pbx_probe:
             self.ask_gpt_map.iloc[i, 1] = end
             if len(country_lst) > 0:
                 country_lst = [item.lower() for item in country_lst]
-                for j in range(0, len(country_lst)):
+                for _j in range(0, len(country_lst)):
                     if srt.lower() in country_lst or end.lower() in country_lst:
                         srt_ = self.country_names.index(srt)
                         end_ = self.country_names.index(end)
@@ -8216,7 +8216,7 @@ class pbx_probe:
         adjacency_matrix = self.matrix_r.values
         G = nx.DiGraph()
         rows, cols = np.where(adjacency_matrix >= 1)
-        edges = list(zip(rows.tolist(), cols.tolist()))
+        edges = list(zip(rows.tolist(), cols.tolist(), strict=False))
         u_rows = list(set(rows.tolist()))
         u_cols = list(set(cols.tolist()))
         labels = [self.labels_r[item] for item in u_cols]
@@ -8378,7 +8378,7 @@ class pbx_probe:
             dict_ = self.dict_id_kwp
             adj_ = "Keywords Plus"
         rows, cols = np.where(adjacency_matrix >= 1)
-        edges = list(zip(rows.tolist(), cols.tolist()))
+        edges = list(zip(rows.tolist(), cols.tolist(), strict=False))
         u_cols = list(set(cols.tolist()))
         self.H = nx.Graph()
         if adj_type == "aut":
@@ -8453,7 +8453,11 @@ class pbx_probe:
             )
             cen_ = "Degree Centrality"
             dict_cen = dict(
-                zip(self.table_centr.iloc[:, -2], self.table_centr.iloc[:, -1])
+                zip(
+                    self.table_centr.iloc[:, -2],
+                    self.table_centr.iloc[:, -1],
+                    strict=False,
+                )
             )
         elif centrality == "load":
             value = nx.algorithms.centrality.load_centrality(self.H)
@@ -8470,7 +8474,11 @@ class pbx_probe:
             )
             cen_ = "Load Centrality"
             dict_cen = dict(
-                zip(self.table_centr.iloc[:, -2], self.table_centr.iloc[:, -1])
+                zip(
+                    self.table_centr.iloc[:, -2],
+                    self.table_centr.iloc[:, -1],
+                    strict=False,
+                )
             )
         elif centrality == "betw":
             value = nx.algorithms.centrality.betweenness_centrality(self.H)
@@ -8491,7 +8499,11 @@ class pbx_probe:
             )
             cen_ = "Betweenness Centrality"
             dict_cen = dict(
-                zip(self.table_centr.iloc[:, -2], self.table_centr.iloc[:, -1])
+                zip(
+                    self.table_centr.iloc[:, -2],
+                    self.table_centr.iloc[:, -1],
+                    strict=False,
+                )
             )
         elif centrality == "close":
             value = nx.algorithms.centrality.closeness_centrality(self.H)
@@ -8512,7 +8524,11 @@ class pbx_probe:
             )
             cen_ = "Closeness Centrality"
             dict_cen = dict(
-                zip(self.table_centr.iloc[:, -2], self.table_centr.iloc[:, -1])
+                zip(
+                    self.table_centr.iloc[:, -2],
+                    self.table_centr.iloc[:, -1],
+                    strict=False,
+                )
             )
         elif centrality == "eigen":
             value = nx.algorithms.centrality.eigenvector_centrality(self.H)
@@ -8533,7 +8549,11 @@ class pbx_probe:
             )
             cen_ = "Eigenvector Centrality"
             dict_cen = dict(
-                zip(self.table_centr.iloc[:, -2], self.table_centr.iloc[:, -1])
+                zip(
+                    self.table_centr.iloc[:, -2],
+                    self.table_centr.iloc[:, -1],
+                    strict=False,
+                )
             )
         elif centrality == "katz":
             value = nx.algorithms.centrality.katz_centrality(self.H)
@@ -8550,7 +8570,11 @@ class pbx_probe:
             )
             cen_ = "Katz Centrality"
             dict_cen = dict(
-                zip(self.table_centr.iloc[:, -2], self.table_centr.iloc[:, -1])
+                zip(
+                    self.table_centr.iloc[:, -2],
+                    self.table_centr.iloc[:, -1],
+                    strict=False,
+                )
             )
         elif centrality == "harmonic":
             value = nx.algorithms.centrality.harmonic_centrality(self.H)
@@ -8567,7 +8591,11 @@ class pbx_probe:
             )
             cen_ = "Harmonic Centrality"
             dict_cen = dict(
-                zip(self.table_centr.iloc[:, -2], self.table_centr.iloc[:, -1])
+                zip(
+                    self.table_centr.iloc[:, -2],
+                    self.table_centr.iloc[:, -1],
+                    strict=False,
+                )
             )
         else:
             generator = nx.algorithms.community.girvan_newman(self.H)
@@ -9149,7 +9177,9 @@ class pbx_probe:
         rows, cols = np.where(matrix >= 1)
         row_map = {idx: int(row_name) for idx, row_name in enumerate(matrix.index)}
         col_map = {idx: int(col_name) for idx, col_name in enumerate(matrix.columns)}
-        citations = [(row_map[r], col_map[c]) for (r, c) in zip(rows, cols)]
+        citations = [
+            (row_map[r], col_map[c]) for (r, c) in zip(rows, cols, strict=False)
+        ]
         rev = [(tgt, src) for (src, tgt) in citations]
         citations = citations + rev
         citations = [tup for tup in citations if tup[0] != tup[1]]
@@ -9170,7 +9200,7 @@ class pbx_probe:
         articles["y_pos"] = [y_offsets[i] for i in articles.index]
         hover_texts = []
         articles = articles.sort_values(by="x_pos")
-        for i, row in articles.iterrows():
+        for _i, row in articles.iterrows():
             txt = f"id: {row['id']}<br>"
             meta = f"{row['author']} ({row['year']}). {row['title']}. {row['journal']}. doi:{row['doi']}"
             wrapped_meta = "<br>".join(textwrap.wrap(meta, width=50))
@@ -9223,7 +9253,7 @@ class pbx_probe:
                             if neigh not in chain:
                                 neighbors.add(neigh)
             node_colors = []
-            for i, row in articles.iterrows():
+            for _i, row in articles.iterrows():
                 art_id_str = str(row["id"])
                 if art_id_str in chain:
                     node_colors.append("green")
@@ -9304,7 +9334,7 @@ class pbx_probe:
             data = [edge_trace_other, edge_trace_chain, node_trace]
         else:
             node_colors = []
-            for i, row in articles.iterrows():
+            for _i, row in articles.iterrows():
                 art_id_str = str(row["id"])
                 if art_id_str in n_m:
                     if min_links > 0:
@@ -9392,7 +9422,9 @@ class pbx_probe:
         citations = [
             (int(r), int(c))
             for (r, c) in zip(
-                self.ask_gpt_hist["Paper ID"], self.ask_gpt_hist["Reference ID"]
+                self.ask_gpt_hist["Paper ID"],
+                self.ask_gpt_hist["Reference ID"],
+                strict=False,
             )
         ]
         self.ask_gpt_hist = self.ask_gpt_hist[
@@ -9963,7 +9995,7 @@ class pbx_probe:
         all_words = []
         all_vectors = []
         all_labels = []
-        for i, (pos, neg) in enumerate(zip(positive, negative)):
+        for _i, (pos, neg) in enumerate(zip(positive, negative, strict=False)):
             query_label = "+".join(pos) + ("-" + "-".join(neg) if neg else "")
             try:
                 similar_words = model.wv.most_similar(
@@ -10238,7 +10270,7 @@ class pbx_probe:
             print("Total Number of Valid Abstracts: ", int(len(corpus) / 2))
             print("")
             if not join_articles:
-                for i, abstract in enumerate(corpus):
+                for i, _abstract in enumerate(corpus):
                     prompt = query + ":\n\n" + f"{i + 1}. {corpus}\n"
             else:
                 corpus = " ".join(corpus)
