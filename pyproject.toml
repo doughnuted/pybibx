@@ -1,56 +1,65 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "pybibx"
 version = "5.1.4"
-authors = [
-  { name="Valdecy Pereira", email="valdecy.pereira@gmail.com" },
-]
 description = "A Bibliometric and Scientometric Library Powered with Artificial Intelligence Tools"
+authors = ["Valdecy Pereira <valdecy.pereira@gmail.com>"]
+license = "GPL-3.0-only"  # SPDX identifier for GNU General Public License v3 (GPLv3)
 readme = "README.md"
-license = { text = "GNU General Public License v3 (GPLv3)" }
-requires-python = ">=3.10"
+homepage = "https://github.com/Valdecy/pybibx"
+repository = "https://github.com/Valdecy/pybibx"
+documentation = "https://github.com/Valdecy/pybibx/blob/master/README.md" # Assuming README is the main documentation for now
+keywords = ["bibliometric", "scientometric", "ai", "nlp", "network analysis"] # Added some potential keywords
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
-]
-dependencies = [
-    "bertopic",
-    "bert-extractive-summarizer",
-    "chardet",
-    "google-generativeai",
-    "gensim",
-    "llmx",
-    "matplotlib",
-    "networkx",
-    "numba",
-    "numpy",
-    "pandas",
-    "plotly",
-    "scipy",
-    "scikit-learn",
-    "sentencepiece",
-    "sentence-transformers",
-    "torch",
-    "torchvision",
-    "torchaudio",
-    "transformers",
-    "umap-learn",
-    "openai",
-    "wordcloud",
-    "importlib-resources",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 
-[project.urls]
-"Homepage" = "https://github.com/Valdecy/pybibx"
+[tool.poetry.dependencies]
+python = ">=3.10"
+bertopic = "*"
+bert-extractive-summarizer = "*"
+chardet = "*"
+google-generativeai = "*"
+gensim = "*"
+llmx = "*"
+matplotlib = "*"
+networkx = "*"
+numba = "*"
+numpy = "==1.26.4" # From requirements.txt
+pandas = "==2.3.0" # From requirements.txt
+plotly = "*"
+scipy = "*"
+scikit-learn = "*"
+sentencepiece = "*"
+sentence-transformers = "*"
+torch = "*"
+torchvision = "*"
+torchaudio = "*"
+transformers = "*"
+umap-learn = "*"
+openai = "*"
+wordcloud = "*"
+importlib-resources = "*" # Was in setup.cfg and pyproject.toml
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.0"
+ruff = ">=0.1.0" # Taking the more general version from pyproject.toml's optional-dependencies
+mkdocs = ">=1.4.0"
+python-dateutil = "==2.9.0.post0" # From requirements.txt
+python-slugify = "==8.0.4"    # From requirements.txt
+jupyter = "*"                     # From requirements.txt
+mypy = "*"                        # From requirements.txt
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.urls]
 "Bug Tracker" = "https://github.com/Valdecy/pybibx/issues"
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0",
-    "ruff>=0.1.0",
-    "mkdocs>=1.4.0",
-]
+Changelog = "https://github.com/Valdecy/pybibx/releases" # Example, can be adjusted

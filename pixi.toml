@@ -1,0 +1,46 @@
+[workspace]
+name = "pybibx"
+version = "5.1.4"
+authors = ["Valdecy Pereira <valdecy.pereira@gmail.com>"]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "win-64"]
+description = "A Bibliometric and Scientometric Library Powered with Artificial Intelligence Tools"
+homepage = "https://github.com/Valdecy/pybibx"
+documentation = "https://github.com/Valdecy/pybibx/blob/master/README.md"
+license = "GPL-3.0-only" # SPDX identifier
+readme = "README.md"
+
+
+[dependencies]
+python = ">=3.10,<3.13" # Ensure Pixi provides a compatible Python
+
+[pypi-dependencies]
+ruff = ">=0.1.0"
+pytest = ">=7.0"
+# mypy and jupyter will be installed via pyproject.toml (Poetry's dev group) by the install-deps task
+
+[tasks]
+lint = "ruff check ."
+format = "ruff format ."
+test = "pytest"
+
+# Task to install Python dependencies from pyproject.toml using UV.
+# This assumes Pixi has set up a Python environment.
+# It compiles all dependencies (main and dev groups from pyproject.toml) via UV.
+install-deps = """
+uv pip compile pyproject.toml --all-extras --output-file .pixi/requirements.temp.txt && \\
+uv pip sync .pixi/requirements.temp.txt && \\
+rm .pixi/requirements.temp.txt
+"""
+
+# To run jupyter (if installed by the install-deps task)
+notebook = "jupyter notebook"
+
+[target.linux-64.tasks]
+# Example of a platform-specific task if needed later
+
+[environments]
+default = { solve-group = "default" }
+
+# feature.dev.dependencies section removed as we are using pypi-dependencies and install-deps for now.
+# If more fine-grained control by Pixi for dev tools via Conda is needed, it can be added back.
