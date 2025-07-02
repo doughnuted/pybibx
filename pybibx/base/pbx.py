@@ -2887,6 +2887,7 @@ class pbx_probe:
         self.ask_gpt_rt = -1
         self.ask_gpt_sk = -1
         self.ask_gpt_wd = -1
+        self.author_dominance_factor = -1
         self.author_country_map = -1
         self.corr_a_country_map = -1
         self.frst_a_country_map = -1
@@ -2925,6 +2926,9 @@ class pbx_probe:
         for paper_idx, authors in enumerate(self.aut):
             for author in authors:
                 self.author_to_papers[author].append(paper_idx)
+
+        self.author_dominance_factor = self.calculate_author_dominance_factor()
+
         self.kid, self.u_kid = self.__get_str(
             entry="keywords", s=";", lower=True, sorting=True
         )
@@ -3496,6 +3500,15 @@ class pbx_probe:
             ]
         )
         report.append(["-//-", "-//-"])
+
+        # Add Author Dominance Factor information
+        if hasattr(self, 'author_dominance_factor') and isinstance(self.author_dominance_factor, pd.DataFrame) and not self.author_dominance_factor.empty:
+            report.append(["AUTHOR DOMINANCE", "---"]) # Section header
+            report.append(["Top Authors by Dominance Factor (Author, DF, Total Arts, Multi Arts, First-Authored Multi Arts)", "---"])
+            for _, row in self.author_dominance_factor.head(5).iterrows(): # Display top 5 or adjust as needed
+                report.append([f"--{row['Author']}", f"DF: {row['Dominance Factor']:.2f}, Total: {row['Total Articles']}, Multi: {row['Multi-Authored Articles']}, FirstMulti: {row['First-Authored Multi-Articles']}"])
+            report.append(["-//-", "-//-"])
+
         self.ask_gpt_rt = pd.DataFrame(report, columns=["Main Information", "Results"])
         report_df = pd.DataFrame(report, columns=["Main Information", "Results"])
         return report_df
@@ -6340,6 +6353,64 @@ class pbx_probe:
                     break
             h_i.append(h)
         return h_i
+
+    # Function: Calculate Author Dominance Factor
+    def calculate_author_dominance_factor(self):
+        """
+        Calculates the dominance factor for each author.
+        The dominance factor is the proportion of multi-authored articles
+        in which an author appears as the first author.
+        """
+        if not hasattr(self, 'u_aut') or not self.u_aut:
+            return pd.DataFrame(columns=[
+                "Author", "Dominance Factor", "Total Articles",
+                "Single-Authored Articles", "Multi-Authored Articles",
+                "First-Authored Multi-Articles"
+            ])
+
+        author_data = []
+
+        for i, author_name in enumerate(self.u_aut):
+            total_articles_for_author = self.doc_aut[i] # Total articles by this author
+
+            multi_authored_papers_by_author = 0
+            first_authored_multi_papers_by_author = 0
+            single_authored_papers_by_author = 0
+
+            # Iterate through all documents/papers
+            for doc_idx in range(len(self.aut)):
+                authors_in_this_doc = self.aut[doc_idx]
+
+                if author_name in authors_in_this_doc: # If the current author is in this paper
+                    num_authors_in_this_doc = len(authors_in_this_doc)
+
+                    if num_authors_in_this_doc > 1:
+                        multi_authored_papers_by_author += 1
+                        if authors_in_this_doc[0] == author_name: # Check if current author is the first author
+                            first_authored_multi_papers_by_author += 1
+                    elif num_authors_in_this_doc == 1:
+                        # This check ensures it's actually this author's single-authored paper
+                        if authors_in_this_doc[0] == author_name:
+                             single_authored_papers_by_author += 1
+
+            if multi_authored_papers_by_author > 0:
+                dominance_factor = first_authored_multi_papers_by_author / multi_authored_papers_by_author
+            else:
+                dominance_factor = 0.0 # Or np.nan, if preferred for authors with no multi-authored papers
+
+            author_data.append({
+                "Author": author_name,
+                "Dominance Factor": round(dominance_factor, 4), # Rounded for display
+                "Total Articles": total_articles_for_author,
+                "Single-Authored Articles": single_authored_papers_by_author,
+                "Multi-Authored Articles": multi_authored_papers_by_author,
+                "First-Authored Multi-Articles": first_authored_multi_papers_by_author
+            })
+
+        df_dominance = pd.DataFrame(author_data)
+        if not df_dominance.empty:
+            df_dominance = df_dominance.sort_values(by=["Dominance Factor", "Total Articles"], ascending=[False, False]).reset_index(drop=True)
+        return df_dominance
 
     # Function: G-Index
     def g_index(self):
