@@ -20,41 +20,49 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 
+# Main application dependencies
 [tool.poetry.dependencies]
 python = ">=3.10"
-bertopic = "*"
-bert-extractive-summarizer = "*"
-chardet = "*"
-google-generativeai = "*"
-gensim = "*"
-llmx = "*"
-matplotlib = "*"
-networkx = "*"
-numba = "*"
-numpy = "==1.26.4" # From requirements.txt
-pandas = "==2.3.0" # From requirements.txt
-plotly = "*"
-scipy = "*"
-scikit-learn = "*"
-sentencepiece = "*"
-sentence-transformers = "*"
+
+# Core libraries from original requirements/Dockerfile
+numpy = "~=1.26.4" # Allows patch updates
+pandas = "~=2.3.0"  # Allows patch updates
+
+# PyTorch libraries reverted to "*" specifier as requested
 torch = "*"
 torchvision = "*"
 torchaudio = "*"
-transformers = "*"
-umap-learn = "*"
-openai = "*"
-wordcloud = "*"
-importlib-resources = "*" # Was in setup.cfg and pyproject.toml
+
+# Other ML/AI and general libraries - using caret or tilde for versioning
+bertopic = "^0.16.0"
+bert-extractive-summarizer = "^0.10.1" # Check for latest, this is an example
+chardet = "^5.2.0"
+google-generativeai = "^0.5.0"
+gensim = "^4.3.0"
+# llmx = "*" # Assuming this might be less common, check its versioning. If very specific, pin, else use caret. For now, leaving as is if unsure.
+llmx = "^0.0.9a0" # Example, if it's pre-release or needs specific pinning. Update after checking.
+matplotlib = "^3.7.0" # Common to allow minor updates
+networkx = "^3.1"
+numba = "^0.59.0" # Numba can be sensitive, check compatibility
+plotly = "^5.10.0"
+scipy = "^1.10.0"
+scikit-learn = "^1.3.0"
+sentencepiece = "^0.2.0" # Or specific version if needed by transformers
+sentence-transformers = "^2.2.0" # Check for latest stable
+transformers = "^4.38.0" # Hugging Face libraries update often
+umap-learn = "^0.5.3"
+openai = "^1.0.0" # OpenAI API has had significant changes around v1
+wordcloud = "^1.9.0"
+importlib-resources = "^6.0.0" # For older python, but good to specify
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.0"
-ruff = ">=0.1.0" # Taking the more general version from pyproject.toml's optional-dependencies
+ruff = ">=0.1.0"
 mkdocs = ">=1.4.0"
-python-dateutil = "==2.9.0.post0" # From requirements.txt
-python-slugify = "==8.0.4"    # From requirements.txt
-jupyter = "*"                     # From requirements.txt
-mypy = "*"                        # From requirements.txt
+python-dateutil = "~=2.9.0" # From requirements.txt, allowing post (like .post0)
+python-slugify = "~=8.0.4"    # From requirements.txt
+jupyter = "^1.0.0"            # Metapackage for Jupyter
+mypy = "^1.0"                 # MyPy for type checking
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
