@@ -34,9 +34,6 @@ dependencies = [
     "scikit-learn",
     "sentencepiece",
     "sentence-transformers",
-    "torch",
-    "torchvision",
-    "torchaudio",
     "transformers",
     "umap-learn",
     "openai",
@@ -53,4 +50,9 @@ dev = [
     "pytest>=7.0",
     "ruff>=0.1.0",
     "mkdocs>=1.4.0",
+]
+gpu = [
+    "torch",
+    "torchvision",
+    "torchaudio",
 ]
