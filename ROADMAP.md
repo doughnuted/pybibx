@@ -28,3 +28,11 @@ This document outlines the plan for modernizing the `pybibx` library.
 - [ ] Create initial documentation structure in a `docs/` directory
 - [ ] Configure `mkdocs.yml`
 - [ ] Generate initial version of the documentation website
+
+## Feature Enhancements (Implemented in Q2 2024 Cycle)
+- [x] **Enhanced Topic Modeling:**
+    - [x] Dynamic Topic Modeling (BERTopic `topics_over_time`)
+    - [x] Hierarchical Topic Modeling (BERTopic `hierarchical_topics`)
+- [x] **Expanded Network Analysis:**
+    - [x] Louvain Community Detection
+    - [x] Calculation of Additional Network Metrics (Degree, Betweenness, Closeness, Eigenvector Centralities; Clustering Coefficient, Graph Density)
