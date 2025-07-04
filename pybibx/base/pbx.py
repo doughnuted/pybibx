@@ -19,6 +19,7 @@ import networkx as nx
 import numpy as np
 import openai
 import os
+import json
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.subplots as ps
@@ -3699,6 +3700,134 @@ class pbx_probe:
             data["author"] = data["author"].apply(
                 lambda x: x.replace(";", " and ") if isinstance(x, str) else x
             )
+            doc = data.shape[0]
+        elif db == "dimensions" and file_extension == ".csv":
+            data = pd.read_csv(bib, encoding="utf8", dtype=str)
+            data.columns = data.columns.str.lower().str.replace(" ", "_")
+            if "authors" in data.columns and "author" not in data.columns:
+                data.rename(columns={"authors": "author"}, inplace=True)
+            if "source_title" in data.columns and "abbrev_source_title" not in data.columns:
+                data.rename(columns={"source_title": "abbrev_source_title"}, inplace=True)
+            if "times_cited" in data.columns and "note" not in data.columns:
+                data.rename(columns={"times_cited": "note"}, inplace=True)
+            if "document_type" not in data.columns:
+                data["document_type"] = "Article"
+            data["source"] = "Dimensions"
+            sanity_check = [
+                "abbrev_source_title",
+                "abstract",
+                "address",
+                "affiliation",
+                "art_number",
+                "author",
+                "author_keywords",
+                "chemicals_cas",
+                "coden",
+                "correspondence_address1",
+                "document_type",
+                "doi",
+                "editor",
+                "funding_details",
+                "funding_text\xa01",
+                "funding_text\xa02",
+                "funding_text\xa03",
+                "isbn",
+                "issn",
+                "journal",
+                "keywords",
+                "language",
+                "note",
+                "number",
+                "page_count",
+                "pages",
+                "publisher",
+                "pubmed_id",
+                "references",
+                "source",
+                "sponsors",
+                "title",
+                "tradenames",
+                "url",
+                "volume",
+                "year",
+            ]
+            for col in sanity_check:
+                if col not in data.columns:
+                    data[col] = "UNKNOWN"
+            data = data.reindex(sorted(data.columns), axis=1)
+            data["author"] = data["author"].apply(lambda x: x.replace(";", " and ") if isinstance(x, str) else x)
+            doc = data.shape[0]
+        elif db == "openalex" and file_extension == ".json":
+            with open(bib, "r", encoding="utf8") as f:
+                jdata = json.load(f)
+            if isinstance(jdata, list):
+                works = jdata
+            elif isinstance(jdata, dict):
+                works = jdata.get("results", [jdata])
+            else:
+                works = []
+            records = []
+            for w in works:
+                row = {
+                    "author": " and ".join(
+                        [a.get("author", {}).get("display_name", "") for a in w.get("authorships", [])]
+                    )
+                    or "UNKNOWN",
+                    "title": w.get("title") or w.get("display_name", "UNKNOWN"),
+                    "year": str(w.get("publication_year", "UNKNOWN")),
+                    "doi": w.get("doi", "UNKNOWN"),
+                    "document_type": w.get("type", "UNKNOWN"),
+                    "abbrev_source_title": w.get("primary_location", {})
+                    .get("source", {})
+                    .get("display_name", "UNKNOWN"),
+                    "note": str(w.get("cited_by_count", 0)),
+                    "references": ";".join(w.get("referenced_works", [])) if w.get("referenced_works") else "UNKNOWN",
+                    "source": "OpenAlex",
+                }
+                records.append(row)
+            data = pd.DataFrame(records, dtype=str)
+            sanity_check = [
+                "abbrev_source_title",
+                "abstract",
+                "address",
+                "affiliation",
+                "art_number",
+                "author",
+                "author_keywords",
+                "chemicals_cas",
+                "coden",
+                "correspondence_address1",
+                "document_type",
+                "doi",
+                "editor",
+                "funding_details",
+                "funding_text\xa01",
+                "funding_text\xa02",
+                "funding_text\xa03",
+                "isbn",
+                "issn",
+                "journal",
+                "keywords",
+                "language",
+                "note",
+                "number",
+                "page_count",
+                "pages",
+                "publisher",
+                "pubmed_id",
+                "references",
+                "source",
+                "sponsors",
+                "title",
+                "tradenames",
+                "url",
+                "volume",
+                "year",
+            ]
+            for col in sanity_check:
+                if col not in data.columns:
+                    data[col] = "UNKNOWN"
+            data = data.reindex(sorted(data.columns), axis=1)
             doc = data.shape[0]
         else:
             f_file = open(bib, "r", encoding="utf8")
