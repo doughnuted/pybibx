@@ -13,19 +13,49 @@
 ############################################################################
 
 # Required Libraries
-import chardet
-import google.generativeai as genai
-import networkx as nx
-import numpy as np
-import openai
 import os
-import pandas as pd
-import plotly.graph_objects as go
-import plotly.subplots as ps
-import plotly.io as pio
 import re
-import unicodedata
 import textwrap
+import unicodedata
+
+try:
+    import chardet
+except ImportError:  # pragma: no cover - optional dependency
+    chardet = None
+
+try:
+    import google.generativeai as genai
+except ImportError:  # pragma: no cover - optional dependency
+    genai = None
+
+try:
+    import networkx as nx
+except ImportError:  # pragma: no cover - optional dependency
+    nx = None
+
+try:
+    import numpy as np
+except ImportError:  # pragma: no cover - optional dependency
+    np = None
+
+try:
+    import openai
+except ImportError:  # pragma: no cover - optional dependency
+    openai = None
+
+try:
+    import pandas as pd
+except ImportError:  # pragma: no cover - optional dependency
+    pd = None
+
+try:
+    import plotly.graph_objects as go
+    import plotly.subplots as ps
+    import plotly.io as pio
+except ImportError:  # pragma: no cover - optional dependency
+    go = None
+    ps = None
+    pio = None
 
 try:
     import importlib.resources as pkg_resources
@@ -33,35 +63,85 @@ except ImportError:
     import importlib_resources as pkg_resources
 from . import stws
 
-from bertopic import BERTopic
 from collections import Counter, defaultdict
 from difflib import SequenceMatcher
+from itertools import combinations
+try:
+    from matplotlib import pyplot as plt
+except ImportError:  # pragma: no cover - optional dependency
+    plt = None
+
+try:
+    from bertopic import BERTopic
+except ImportError:  # pragma: no cover - optional dependency
+    BERTopic = None
 
 # from keybert import KeyBERT
-from gensim.models import FastText
-from itertools import combinations
-from matplotlib import pyplot as plt
+try:
+    from gensim.models import FastText
+except ImportError:  # pragma: no cover - optional dependency
+    FastText = None
 
-plt.style.use("bmh")
-from numba import njit
-from numba.typed import List
+try:
+    from numba import njit
+    from numba.typed import List
+except ImportError:  # pragma: no cover - optional dependency
+    def njit(func=None, **kwargs):  # type: ignore
+        return func
+
+    class List(list):
+        pass
 
 # from rapidfuzz import fuzz
-from scipy.ndimage import gaussian_filter1d
-from scipy.signal import find_peaks
-from scipy.sparse import coo_matrix
-from scipy.sparse import csr_matrix
-from sentence_transformers import SentenceTransformer
-from sklearn.cluster import KMeans, HDBSCAN
-from sklearn.decomposition import TruncatedSVD as tsvd
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from summarizer import Summarizer
-from transformers import PegasusForConditionalGeneration
-from transformers import PegasusTokenizer
-from umap import UMAP
-from wordcloud import WordCloud
+try:
+    from scipy.ndimage import gaussian_filter1d
+    from scipy.signal import find_peaks
+    from scipy.sparse import coo_matrix, csr_matrix
+except ImportError:  # pragma: no cover - optional dependency
+    gaussian_filter1d = None
+    find_peaks = None
+    coo_matrix = None
+    csr_matrix = None
+
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:  # pragma: no cover - optional dependency
+    SentenceTransformer = None
+
+try:
+    from sklearn.cluster import KMeans, HDBSCAN
+    from sklearn.decomposition import TruncatedSVD as tsvd
+    from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+except ImportError:  # pragma: no cover - optional dependency
+    KMeans = HDBSCAN = tsvd = CountVectorizer = TfidfVectorizer = cosine_similarity = None
+
+try:
+    from summarizer import Summarizer
+except ImportError:  # pragma: no cover - optional dependency
+    Summarizer = None
+
+try:
+    from transformers import (
+        PegasusForConditionalGeneration,
+        PegasusTokenizer,
+    )
+except ImportError:  # pragma: no cover - optional dependency
+    PegasusForConditionalGeneration = None
+    PegasusTokenizer = None
+
+try:
+    from umap import UMAP
+except ImportError:  # pragma: no cover - optional dependency
+    UMAP = None
+
+try:
+    from wordcloud import WordCloud
+except ImportError:  # pragma: no cover - optional dependency
+    WordCloud = None
+
+if plt is not None:
+    plt.style.use("bmh")
 
 ############################################################################
 
@@ -4706,7 +4786,7 @@ class pbx_probe:
                     compiled_regex = re.compile(key)
                     if re.search(compiled_regex, corpus):
                         matched_indices.append(i)
-                except:
+                except re.error:
                     pass
         insd_r = []
         insd_t = []
@@ -4868,7 +4948,7 @@ class pbx_probe:
             vec = CountVectorizer(
                 stop_words=frozenset(sw_full), ngram_range=(ngrams, ngrams)
             ).fit(corpora)
-        except:
+        except ValueError:
             vec = CountVectorizer(stop_words=sw_full, ngram_range=(ngrams, ngrams)).fit(
                 corpora
             )
@@ -6355,7 +6435,7 @@ class pbx_probe:
                         try:
                             citation_int = int(citation_val)
                             researcher_to_citations[researcher].append(citation_int)
-                        except:
+                        except (ValueError, TypeError):
                             pass
         for researcher in self.u_aut:
             citations = researcher_to_citations[researcher]
@@ -6382,7 +6462,7 @@ class pbx_probe:
                     if year_val != -1:
                         try:
                             researcher_to_years[researcher].append(float(year_val))
-                        except:
+                        except (ValueError, TypeError):
                             pass
         for idx, researcher in enumerate(self.u_aut):
             if researcher_to_years[researcher]:
@@ -6409,7 +6489,7 @@ class pbx_probe:
                         try:
                             citation_int = int(citation_val)
                             researcher_to_citations[researcher].append(citation_int)
-                        except:
+                        except (ValueError, TypeError):
                             pass
         e_indices = []
         for researcher, h in zip(self.u_aut, self.aut_h):
@@ -6612,7 +6692,7 @@ class pbx_probe:
         tf_idf = vectorizer.fit_transform(corpus)
         try:
             tokens = vectorizer.get_feature_names_out()
-        except:
+        except AttributeError:
             tokens = vectorizer.get_feature_names()
         values = tf_idf.todense()
         values = values.tolist()
@@ -7686,7 +7766,7 @@ class pbx_probe:
                     compiled_regex = re.compile(key)
                     if re.search(compiled_regex, corpus):
                         matched_indices.append(i)
-                except:
+                except re.error:
                     pass
         insd_r = []
         insd_t = []
@@ -8057,7 +8137,7 @@ class pbx_probe:
             col_pos = self.matrix_a.columns.get_loc("UNKNOWN")
             adjacency_matrix[row_pos, :] = 0
             adjacency_matrix[:, col_pos] = 0
-        except:
+        except KeyError:
             pass
         vals = [
             int(self.dict_ctr_id[text[i]].replace("c_", ""))
@@ -8074,7 +8154,7 @@ class pbx_probe:
         try:
             unk = int(self.dict_ctr_id["UNKNOWN"].replace("c_", ""))
             edges = list(filter(lambda edge: unk not in edge, edges))
-        except:
+        except KeyError:
             pass
         self.ask_gpt_map = pd.DataFrame(edges, columns=["Country 1", "Country 2"])
         nids_list = [
@@ -9688,7 +9768,7 @@ class pbx_probe:
             )
         try:
             embeddings = self.topic_model.c_tf_idf.toarray()
-        except:
+        except AttributeError:
             embeddings = self.topic_model.c_tf_idf_.toarray()
         if method.lower() == "umap":
             decomposition = UMAP(n_components=2, random_state=1001)
@@ -9769,7 +9849,7 @@ class pbx_probe:
         topics_label = []
         try:
             embeddings = self.topic_model.c_tf_idf.toarray()
-        except:
+        except AttributeError:
             embeddings = self.topic_model.c_tf_idf_.toarray()
         dist_matrix = cosine_similarity(embeddings)
         for i in range(0, self.topic_info.shape[0]):
@@ -10128,7 +10208,7 @@ class pbx_probe:
                     max_tokens=max_tokens,
                 )
                 response = response["choices"][0]["message"]["content"]
-            except:
+            except openai.error.OpenAIError:
                 response = openai.Completion.create(
                     engine=model,
                     prompt=prompt,
@@ -10147,7 +10227,7 @@ class pbx_probe:
                     max_tokens=max_tokens,
                 )
                 response = response.choices[0].message.content
-            except:
+            except openai.error.OpenAIError:
                 client = openai.OpenAI(api_key=api_key)
                 response = client.completions.create(
                     model=model,
