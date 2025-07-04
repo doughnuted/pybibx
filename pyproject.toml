@@ -54,3 +54,6 @@ dev = [
     "ruff>=0.1.0",
     "mkdocs>=1.4.0",
 ]
+viz = [
+    "missingno"
+]
