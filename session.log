@@ -1,0 +1,17 @@
+## Session Log
+Date: Wed Jul  2 23:07:22 UTC 2025
+
+### Summary
+- Added a new phase to `ROADMAP.md` outlining tasks to support Dimensions and OpenAlex citation sources.
+- Created this `session.log` to track progress and next steps.
+
+### Next Steps
+1. Research the export formats of Dimensions and OpenAlex (CSV, RIS, JSON, etc.).
+2. Map those fields to the schema used in `pbx_probe`.
+3. Extend `pbx_probe` with new parsing logic for both sources.
+4. Add sample datasets and unit tests demonstrating the loading pipelines.
+5. Update documentation with usage instructions.
+
+### Session 2 (Jul 2 23:24 UTC 2025)
+- Fixed failing tests by correcting import paths and skipping when heavy dependencies are missing.
+- Installed minimal package `chardet`.
