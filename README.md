@@ -24,6 +24,10 @@ A Bibliometric and Scientometric Library Powered with Artificial Intelligence To
     ```bash
     pip install -e .
     ```
+    To enable GPU-based features, include the optional extras:
+    ```bash
+    pip install -e .[gpu]
+    ```
 
 ## Usage
 

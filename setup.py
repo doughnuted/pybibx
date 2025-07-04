@@ -15,7 +15,6 @@ setup(
     include_package_data=True,
     install_requires=[
         'bertopic',
-        'bert-extractive-summarizer',
         'chardet',
         'google-generativeai',
         'gensim',
@@ -29,15 +28,21 @@ setup(
         'scipy',
         'scikit-learn',
         'sentencepiece',
-        'sentence-transformers',
-        'torch', 
-        'torchvision',
-        'torchaudio',
-        'transformers',
         'umap-learn',
         'openai',
         'wordcloud'
     ],
+    extras_require={
+        'gpu': [
+            'bertopic',
+            'bert-extractive-summarizer',
+            'sentence-transformers',
+            'torch',
+            'torchvision',
+            'torchaudio',
+            'transformers',
+        ]
+    },
     zip_safe=True,
     description='A Bibliometric and Scientometric Library Powered with Artificial Intelligence Tools',
     long_description=long_description,
