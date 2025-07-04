@@ -3500,6 +3500,27 @@ class pbx_probe:
         report_df = pd.DataFrame(report, columns=["Main Information", "Results"])
         return report_df
 
+    # Function: Bibliometric Analysis Summary
+    def biblio_analysis(self):
+        """Return basic bibliometric statistics as a DataFrame."""
+        metrics = []
+        metrics.append(["Timespan", f"{self.date_str}-{self.date_end}"])
+        metrics.append(["Total Documents", self.data.shape[0]])
+        metrics.append(["Total Sources", len(self.u_jou)])
+        metrics.append(["Total Authors", len(self.u_aut)])
+        metrics.append([
+            "Authors per Document",
+            round(sum(self.aut_docs) / len(self.aut_docs), 2) if self.aut_docs else 0,
+        ])
+        metrics.append(["Author Appearances", sum(self.aut_docs)])
+        metrics.append(["Single-authored Documents", self.aut_single])
+        metrics.append(["Multi-authored Documents", len(self.aut_multi)])
+        metrics.append(["Total Citations", sum(self.citation)])
+        metrics.append(["Average Citations per Document", self.av_c_doc])
+        metrics.append(["Average Documents per Author", self.av_doc_aut])
+        df = pd.DataFrame(metrics, columns=["Metric", "Value"])
+        return df
+
     # Function: Health of .bib docs
     def health_bib(self):
         n = self.data.shape[0]
