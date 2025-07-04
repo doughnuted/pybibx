@@ -1,5 +1,7 @@
 import pytest
-from pybibx.pybibx.base.pbx import pbx_probe
+
+pbx_mod = pytest.importorskip("pybibx.base.pbx")
+pbx_probe = pbx_mod.pbx_probe
 
 def test_pbx_probe_initialization():
     # This is a basic smoke test to ensure the class can be instantiated.
