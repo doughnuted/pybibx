@@ -26,6 +26,7 @@ import plotly.io as pio
 import re
 import unicodedata
 import textwrap
+import json
 
 try:
     import importlib.resources as pkg_resources
@@ -41,8 +42,6 @@ from difflib import SequenceMatcher
 from gensim.models import FastText
 from itertools import combinations
 from matplotlib import pyplot as plt
-
-plt.style.use("bmh")
 from numba import njit
 from numba.typed import List
 
@@ -62,6 +61,8 @@ from transformers import PegasusForConditionalGeneration
 from transformers import PegasusTokenizer
 from umap import UMAP
 from wordcloud import WordCloud
+
+plt.style.use("bmh")
 
 ############################################################################
 
@@ -3700,6 +3701,85 @@ class pbx_probe:
                 lambda x: x.replace(";", " and ") if isinstance(x, str) else x
             )
             doc = data.shape[0]
+        elif db == "openalex":
+            sanity_check = [
+                "abbrev_source_title",
+                "abstract",
+                "address",
+                "affiliation",
+                "art_number",
+                "author",
+                "author_keywords",
+                "chemicals_cas",
+                "coden",
+                "correspondence_address1",
+                "document_type",
+                "doi",
+                "editor",
+                "funding_details",
+                "funding_text\xa01",
+                "funding_text\xa02",
+                "funding_text\xa03",
+                "isbn",
+                "issn",
+                "journal",
+                "keywords",
+                "language",
+                "note",
+                "number",
+                "page_count",
+                "pages",
+                "publisher",
+                "pubmed_id",
+                "references",
+                "source",
+                "sponsors",
+                "title",
+                "tradenames",
+                "url",
+                "volume",
+                "year",
+            ]
+
+            rows = []
+            with open(bib, "r", encoding="utf8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    obj = json.loads(line)
+                    authors = " and ".join(
+                        [a.get("author", {}).get("display_name", "") for a in obj.get("authorships", [])]
+                    )
+                    affiliations = "; ".join(
+                        [
+                            "; ".join(
+                                [aff.get("raw_affiliation_string", "") for aff in a.get("affiliations", [])]
+                            )
+                            for a in obj.get("authorships", [])
+                        ]
+                    )
+                    row = {
+                        "author": authors if authors else "UNKNOWN",
+                        "affiliation": affiliations if affiliations else "UNKNOWN",
+                        "title": obj.get("title") or obj.get("display_name", "UNKNOWN"),
+                        "doi": obj.get("doi") or obj.get("ids", {}).get("doi", "UNKNOWN"),
+                        "year": str(obj.get("publication_year")) if obj.get("publication_year") else "UNKNOWN",
+                        "abbrev_source_title": obj.get("primary_location", {}).get("source", {}).get("display_name", "UNKNOWN"),
+                        "journal": obj.get("primary_location", {}).get("source", {}).get("display_name", "UNKNOWN"),
+                        "url": obj.get("primary_location", {}).get("landing_page_url", "UNKNOWN"),
+                        "source": "OpenAlex",
+                        "document_type": obj.get("type", "UNKNOWN").title() if isinstance(obj.get("type", ""), str) else "UNKNOWN",
+                        "language": obj.get("language", "UNKNOWN"),
+                    }
+                    rows.append(row)
+
+            data = pd.DataFrame(rows)
+            for col in sanity_check:
+                if col not in data.columns:
+                    data[col] = "UNKNOWN"
+            data = data.reindex(sorted(data.columns), axis=1)
+            doc = data.shape[0]
         else:
             f_file = open(bib, "r", encoding="utf8")
             f_lines = f_file.read()
@@ -4706,7 +4786,7 @@ class pbx_probe:
                     compiled_regex = re.compile(key)
                     if re.search(compiled_regex, corpus):
                         matched_indices.append(i)
-                except:
+                except Exception:
                     pass
         insd_r = []
         insd_t = []
@@ -4868,7 +4948,7 @@ class pbx_probe:
             vec = CountVectorizer(
                 stop_words=frozenset(sw_full), ngram_range=(ngrams, ngrams)
             ).fit(corpora)
-        except:
+        except Exception:
             vec = CountVectorizer(stop_words=sw_full, ngram_range=(ngrams, ngrams)).fit(
                 corpora
             )
@@ -6355,7 +6435,7 @@ class pbx_probe:
                         try:
                             citation_int = int(citation_val)
                             researcher_to_citations[researcher].append(citation_int)
-                        except:
+                        except Exception:
                             pass
         for researcher in self.u_aut:
             citations = researcher_to_citations[researcher]
@@ -6382,7 +6462,7 @@ class pbx_probe:
                     if year_val != -1:
                         try:
                             researcher_to_years[researcher].append(float(year_val))
-                        except:
+                        except Exception:
                             pass
         for idx, researcher in enumerate(self.u_aut):
             if researcher_to_years[researcher]:
@@ -6409,7 +6489,7 @@ class pbx_probe:
                         try:
                             citation_int = int(citation_val)
                             researcher_to_citations[researcher].append(citation_int)
-                        except:
+                        except Exception:
                             pass
         e_indices = []
         for researcher, h in zip(self.u_aut, self.aut_h):
@@ -6612,7 +6692,7 @@ class pbx_probe:
         tf_idf = vectorizer.fit_transform(corpus)
         try:
             tokens = vectorizer.get_feature_names_out()
-        except:
+        except Exception:
             tokens = vectorizer.get_feature_names()
         values = tf_idf.todense()
         values = values.tolist()
@@ -7686,7 +7766,7 @@ class pbx_probe:
                     compiled_regex = re.compile(key)
                     if re.search(compiled_regex, corpus):
                         matched_indices.append(i)
-                except:
+                except Exception:
                     pass
         insd_r = []
         insd_t = []
@@ -8057,7 +8137,7 @@ class pbx_probe:
             col_pos = self.matrix_a.columns.get_loc("UNKNOWN")
             adjacency_matrix[row_pos, :] = 0
             adjacency_matrix[:, col_pos] = 0
-        except:
+        except Exception:
             pass
         vals = [
             int(self.dict_ctr_id[text[i]].replace("c_", ""))
@@ -8074,7 +8154,7 @@ class pbx_probe:
         try:
             unk = int(self.dict_ctr_id["UNKNOWN"].replace("c_", ""))
             edges = list(filter(lambda edge: unk not in edge, edges))
-        except:
+        except Exception:
             pass
         self.ask_gpt_map = pd.DataFrame(edges, columns=["Country 1", "Country 2"])
         nids_list = [
@@ -9688,7 +9768,7 @@ class pbx_probe:
             )
         try:
             embeddings = self.topic_model.c_tf_idf.toarray()
-        except:
+        except Exception:
             embeddings = self.topic_model.c_tf_idf_.toarray()
         if method.lower() == "umap":
             decomposition = UMAP(n_components=2, random_state=1001)
@@ -9769,7 +9849,7 @@ class pbx_probe:
         topics_label = []
         try:
             embeddings = self.topic_model.c_tf_idf.toarray()
-        except:
+        except Exception:
             embeddings = self.topic_model.c_tf_idf_.toarray()
         dist_matrix = cosine_similarity(embeddings)
         for i in range(0, self.topic_info.shape[0]):
@@ -10128,7 +10208,7 @@ class pbx_probe:
                     max_tokens=max_tokens,
                 )
                 response = response["choices"][0]["message"]["content"]
-            except:
+            except Exception:
                 response = openai.Completion.create(
                     engine=model,
                     prompt=prompt,
@@ -10147,7 +10227,7 @@ class pbx_probe:
                     max_tokens=max_tokens,
                 )
                 response = response.choices[0].message.content
-            except:
+            except Exception:
                 client = openai.OpenAI(api_key=api_key)
                 response = client.completions.create(
                     model=model,

@@ -17,6 +17,7 @@ This document outlines the plan for modernizing the `pybibx` library.
 - [ ] Set up `pytest` framework
 - [ ] Create a `tests/` directory
 - [ ] Implement initial smoke tests for core functionality
+- [x] Support OpenAlex JSONL bibliographies
 
 ## Phase 4: Continuous Integration (CI)
 - [ ] Create a `.github/workflows/` directory

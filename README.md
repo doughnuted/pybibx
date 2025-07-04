@@ -34,3 +34,19 @@ import pybibx
 
 # Your code here
 ```
+
+## Loading OpenAlex Data
+
+`pybibx` understands the JSONL files distributed by [OpenAlex](https://openalex.org/).
+To load such a file simply specify `db="openalex"` when creating the probe:
+
+```python
+from pybibx.base import pbx_probe
+
+probe = pbx_probe(
+    file_bib="assets/bibs/openalex_sample.jsonl",
+    db="openalex",
+    del_duplicated=False,
+)
+print(probe.data.head())
+```
