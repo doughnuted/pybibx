@@ -28,3 +28,11 @@ This document outlines the plan for modernizing the `pybibx` library.
 - [ ] Create initial documentation structure in a `docs/` directory
 - [ ] Configure `mkdocs.yml`
 - [ ] Generate initial version of the documentation website
+
+## Phase 6: Support Additional Citation Sources
+- [ ] Research export formats for Dimensions and OpenAlex
+- [ ] Define field mapping to existing schema
+- [ ] Extend `pbx_probe` to parse Dimensions exports
+- [ ] Extend `pbx_probe` to parse OpenAlex exports
+- [ ] Add example datasets and new unit tests
+
