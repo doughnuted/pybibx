@@ -9443,6 +9443,185 @@ class pbx_probe:
 
     ############################################################################
 
+    # Function: Citation History Plot
+    def hist_plot(
+        self,
+        citations,
+        view="browser",
+        chain=[],
+        path=True,
+        node_size=20,
+        font_size=10,
+        node_labels=True,
+        dist=1.2,
+    ):
+        """Plot a chronological citation network from a list of citation edges.
+
+        Parameters
+        ----------
+        citations : list of tuple
+            List of edges ``(paper_id, reference_id)`` representing the citation
+            network.
+        view : str, optional
+            If ``"browser"`` (default), the plot is rendered in the default
+            browser.
+        chain : list, optional
+            Highlight a citation chain by providing an ordered list of paper
+            IDs.
+        path : bool, optional
+            If ``True`` highlights only the provided chain. If ``False`` also
+            shows direct neighbours of each chain element.
+        node_size : int, optional
+            Size of the nodes.
+        font_size : int, optional
+            Font size for node labels.
+        node_labels : bool, optional
+            Display node labels when ``True``.
+        dist : float, optional
+            Vertical spacing between nodes published in the same year.
+        """
+
+        if view == "browser":
+            pio.renderers.default = "browser"
+        mode = "markers+text" if node_labels else "markers"
+        chain = [str(c) for c in chain]
+
+        articles = self.data[["author", "title", "journal", "doi"]].copy()
+        articles["id"] = self.table_id_doc.iloc[:, 0]
+        articles["year"] = self.data["year"].astype(int)
+
+        node_ids = {str(s) for s, _ in citations} | {str(t) for _, t in citations}
+        articles = articles[articles["id"].astype(str).isin(node_ids)]
+        articles = articles.sort_values(by="year").reset_index(drop=True)
+        articles["x_pos"] = articles["year"]
+
+        years = sorted(articles["year"].unique())
+        y_offsets = {}
+        for yr in years:
+            indices = articles.index[articles["year"] == yr].tolist()
+            indices = sorted(
+                indices, key=lambda x: self.natsort(str(articles.loc[x, "id"]))
+            )
+            offsets = [i * dist for i in range(len(indices))]
+            for idx, art_idx in enumerate(indices):
+                y_offsets[art_idx] = offsets[idx]
+        articles["y_pos"] = [y_offsets[i] for i in articles.index]
+
+        hover_texts = []
+        articles = articles.sort_values(by="x_pos")
+        for _, row in articles.iterrows():
+            txt = f"id: {row['id']}<br>"
+            meta = (
+                f"{row['author']} ({row['year']}). {row['title']}. "
+                f"{row['journal']}. doi:{row['doi']}"
+            )
+            wrapped_meta = "<br>".join(textwrap.wrap(meta, width=50))
+            txt += wrapped_meta
+            hover_texts.append(txt)
+
+        node_trace = go.Scatter(
+            x=articles["x_pos"],
+            y=articles["y_pos"],
+            mode=mode,
+            marker=dict(
+                symbol="circle-dot",
+                size=node_size,
+                color="blue",
+                line=dict(color="rgb(50, 50, 50)", width=0.15),
+            ),
+            text=articles["id"] if node_labels else None,
+            hoverinfo="text",
+            hovertext=hover_texts,
+            name="",
+        )
+
+        Xa, Ya = [], []
+        article_dict = articles.set_index("id").to_dict(orient="index")
+        for src, tgt in citations:
+            src, tgt = str(src), str(tgt)
+            if src in article_dict and tgt in article_dict:
+                Xa.append(article_dict[src]["x_pos"])
+                Ya.append(article_dict[src]["y_pos"])
+                Xa.append(article_dict[tgt]["x_pos"])
+                Ya.append(article_dict[tgt]["y_pos"])
+                Xa.append(None)
+                Ya.append(None)
+        edge_trace = go.Scatter(
+            x=Xa,
+            y=Ya,
+            mode="lines",
+            line=dict(color="rgba(0, 0, 0, 0.15)", width=0.5, dash="dot"),
+            hoverinfo="none",
+            name="",
+        )
+
+        data = [edge_trace, node_trace]
+
+        if chain:
+            adjacency_list = {}
+            for src, tgt in citations:
+                adjacency_list.setdefault(str(src), []).append(str(tgt))
+            neighbours = set()
+            if not path:
+                for c in chain:
+                    neighbours.update(adjacency_list.get(c, []))
+            node_colors = []
+            for i, row in articles.iterrows():
+                art_id = str(row["id"])
+                if art_id in chain:
+                    node_colors.append("green")
+                elif art_id in neighbours:
+                    node_colors.append("red")
+                else:
+                    node_colors.append("rgba(0, 0, 255, 0.15)")
+
+            node_trace.marker.color = node_colors
+
+        layout = go.Layout(
+            showlegend=False, hovermode="closest", margin=dict(b=10, l=5, r=5, t=10)
+        )
+        fig = go.Figure(data=data, layout=layout)
+        fig.update_layout(
+            plot_bgcolor="rgb(255, 255, 255)",
+            hoverlabel=dict(font_size=12),
+            xaxis=dict(
+                showgrid=False,
+                zeroline=False,
+                showticklabels=True,
+                title="Years",
+                tickangle=90,
+                type="category",
+                categoryorder="array",
+                categoryarray=years,
+            ),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, title=""),
+        )
+        fig.update_traces(textfont_size=font_size, textfont_color="yellow")
+        fig.show()
+
+        df = pd.DataFrame(citations, columns=["Paper ID", "Reference ID"])
+        df["Paper ID"] = df["Paper ID"].astype(str)
+        df["Reference ID"] = df["Reference ID"].astype(str)
+        df = df.merge(
+            articles[["id", "year"]], left_on="Paper ID", right_on="id", how="left"
+        ).drop("id", axis=1)
+        df.rename(columns={"year": "Paper_Year"}, inplace=True)
+        df = df.merge(
+            articles[["id", "year"]], left_on="Reference ID", right_on="id", how="left"
+        ).drop("id", axis=1)
+        df.rename(columns={"year": "Reference_Year"}, inplace=True)
+        df["Paper ID (Year)"] = df.apply(
+            lambda row: f"{row['Paper ID']} ({row['Paper_Year']})", axis=1
+        )
+        df["Reference ID (Year)"] = df.apply(
+            lambda row: f"{row['Reference ID']} ({row['Reference_Year']})", axis=1
+        )
+        self.ask_gpt_hist = df[["Paper ID (Year)", "Reference ID (Year)"]]
+
+        return citations
+
+    ############################################################################
+
     # Function: Sentence Embeddings # 'abs', 'title', 'kwa', 'kwp'
     def create_embeddings(
         self,
