@@ -34,3 +34,20 @@ import pybibx
 
 # Your code here
 ```
+
+### Visualize Missing Data
+
+Install the optional visualization extras to enable `plot_missing`:
+
+```bash
+pip install pybibx[viz]
+```
+
+Then plot the missing values from a loaded bibliography:
+
+```python
+from pybibx.base.pbx import pbx_probe
+
+probe = pbx_probe("sample.bib")
+probe.plot_missing()
+```

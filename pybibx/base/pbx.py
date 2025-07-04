@@ -4776,6 +4776,21 @@ class pbx_probe:
         plt.show()
         return
 
+    # Function: Plot Missing Values
+    def plot_missing(self, method="matrix"):
+        try:
+            import missingno as msno
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError(
+                "The 'missingno' package is required for this feature. Install it via 'pip install pybibx[viz]'"
+            )
+        if method == "heatmap":
+            msno.heatmap(self.data)
+        else:
+            msno.matrix(self.data)
+        plt.show()
+        return
+
     # Function: Get Top N-Grams
     def get_top_ngrams(
         self,
