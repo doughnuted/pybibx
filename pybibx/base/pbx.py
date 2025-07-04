@@ -111,6 +111,19 @@ def build_edges_ref(ref_idx_list):
 # pbx Class
 class pbx_probe:
     def __init__(self, file_bib, db="scopus", del_duplicated=True):
+        """Initialize the bibliographic probe.
+
+        Parameters
+        ----------
+        file_bib : str
+            Path to the bibliography file.
+        db : str, optional
+            Name of the source database (e.g. "scopus", "wos", "pubmed",
+            "dimensions").
+        del_duplicated : bool, optional
+            Whether duplicated entries should be removed.
+        """
+
         db = db.lower()
         self.database = db
         self.institution_names = [
@@ -3699,6 +3712,129 @@ class pbx_probe:
             data["author"] = data["author"].apply(
                 lambda x: x.replace(";", " and ") if isinstance(x, str) else x
             )
+            doc = data.shape[0]
+        elif db == "dimensions" and file_extension == ".csv":
+            data = pd.read_csv(bib, encoding="utf8", dtype=str)
+            data.columns = data.columns.str.lower()
+            rename_map = {
+                "authors": "author",
+                "author(s)": "author",
+                "source title": "journal",
+                "source_title": "journal",
+                "publication year": "year",
+                "issue": "number",
+                "link": "url",
+                "type": "document_type",
+            }
+            for k, v in rename_map.items():
+                if k in data.columns and v not in data.columns:
+                    data.rename(columns={k: v}, inplace=True)
+            sanity_check = [
+                "abbrev_source_title",
+                "abstract",
+                "address",
+                "affiliation",
+                "art_number",
+                "author",
+                "author_keywords",
+                "chemicals_cas",
+                "coden",
+                "correspondence_address1",
+                "document_type",
+                "doi",
+                "editor",
+                "funding_details",
+                "funding_text\xa01",
+                "funding_text\xa02",
+                "funding_text\xa03",
+                "isbn",
+                "issn",
+                "journal",
+                "keywords",
+                "language",
+                "note",
+                "number",
+                "page_count",
+                "pages",
+                "publisher",
+                "pubmed_id",
+                "references",
+                "source",
+                "sponsors",
+                "title",
+                "tradenames",
+                "url",
+                "volume",
+                "year",
+            ]
+            for col in sanity_check:
+                if col not in data.columns:
+                    data[col] = "UNKNOWN"
+            data = data.reindex(sorted(data.columns), axis=1)
+            data["author"] = data["author"].apply(
+                lambda x: x.replace(";", " and ") if isinstance(x, str) else x
+            )
+            doc = data.shape[0]
+        elif db == "dimensions" and file_extension in (".bib", ".bibtex"):
+            import bibtexparser
+            with open(bib, "r", encoding="utf8") as f:
+                bib_db = bibtexparser.load(f)
+            data = pd.DataFrame(bib_db.entries)
+            data.columns = data.columns.str.lower()
+            rename_map = {
+                "journal": "journal",
+                "year": "year",
+                "volume": "volume",
+                "number": "number",
+                "pages": "pages",
+                "doi": "doi",
+                "url": "url",
+                "author": "author",
+                "title": "title",
+            }
+            data.rename(columns=rename_map, inplace=True)
+            sanity_check = [
+                "abbrev_source_title",
+                "abstract",
+                "address",
+                "affiliation",
+                "art_number",
+                "author",
+                "author_keywords",
+                "chemicals_cas",
+                "coden",
+                "correspondence_address1",
+                "document_type",
+                "doi",
+                "editor",
+                "funding_details",
+                "funding_text\xa01",
+                "funding_text\xa02",
+                "funding_text\xa03",
+                "isbn",
+                "issn",
+                "journal",
+                "keywords",
+                "language",
+                "note",
+                "number",
+                "page_count",
+                "pages",
+                "publisher",
+                "pubmed_id",
+                "references",
+                "source",
+                "sponsors",
+                "title",
+                "tradenames",
+                "url",
+                "volume",
+                "year",
+            ]
+            for col in sanity_check:
+                if col not in data.columns:
+                    data[col] = "UNKNOWN"
+            data = data.reindex(sorted(data.columns), axis=1)
             doc = data.shape[0]
         else:
             f_file = open(bib, "r", encoding="utf8")

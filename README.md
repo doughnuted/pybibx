@@ -30,7 +30,13 @@ A Bibliometric and Scientometric Library Powered with Artificial Intelligence To
 Once the installation is complete, you can use the library in your Python projects.
 
 ```python
-import pybibx
+from pybibx.base import pbx_probe
 
-# Your code here
+# Load a Dimensions CSV file
+probe = pbx_probe('assets/bibs/dimensions_sample.csv', db='dimensions')
+print(probe.data.head())
+
+# Or load a Dimensions BibTeX file
+probe_bib = pbx_probe('assets/bibs/dimensions_sample.bib', db='dimensions')
+print(probe_bib.data.head())
 ```
