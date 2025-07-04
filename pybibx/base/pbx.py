@@ -41,8 +41,6 @@ from difflib import SequenceMatcher
 from gensim.models import FastText
 from itertools import combinations
 from matplotlib import pyplot as plt
-
-plt.style.use("bmh")
 from numba import njit
 from numba.typed import List
 
@@ -62,6 +60,8 @@ from transformers import PegasusForConditionalGeneration
 from transformers import PegasusTokenizer
 from umap import UMAP
 from wordcloud import WordCloud
+
+plt.style.use("bmh")
 
 ############################################################################
 
