@@ -108,6 +108,19 @@ def build_edges_ref(ref_idx_list):
     return row_indices, col_indices
 
 
+def _split_references(text, source):
+    """Return a list of reference strings according to the database source."""
+    if not isinstance(text, str):
+        return []
+    source = (source or "").lower()
+    if source == "pubmed":
+        refs = [line.strip() for line in text.splitlines() if line.strip()]
+    else:
+        refs = re.split(r";\s*(?=[A-Z])", text)
+        refs = [ref.strip() for ref in refs if ref.strip()]
+    return refs
+
+
 # pbx Class
 class pbx_probe:
     def __init__(self, file_bib, db="scopus", del_duplicated=True):
@@ -4271,16 +4284,29 @@ class pbx_probe:
     # Function: Get Entries
     def __get_str(self, entry="references", s=";", lower=True, sorting=True):
         column = self.data[entry]
-        info = [
-            [
-                " ".join(item.split()).lower() if lower else " ".join(item.split())
-                for item in e.split(s)
-                if item.strip() and item.strip() != "note"
+        if entry == "references":
+            sources = self.data.get("source", pd.Series([""] * len(column)))
+            info = [
+                [
+                    " ".join(item.split()).lower() if lower else " ".join(item.split())
+                    for item in _split_references(text, src)
+                    if item.strip() and item.strip() != "note"
+                ]
+                if isinstance(text, str)
+                else []
+                for text, src in zip(column, sources)
             ]
-            if isinstance(e, str)
-            else []
-            for e in column
-        ]
+        else:
+            info = [
+                [
+                    " ".join(item.split()).lower() if lower else " ".join(item.split())
+                    for item in e.split(s)
+                    if item.strip() and item.strip() != "note"
+                ]
+                if isinstance(e, str)
+                else []
+                for e in column
+            ]
         unique_info = list({item for sublist in info for item in sublist})
         if "" in unique_info:
             unique_info.remove("")
