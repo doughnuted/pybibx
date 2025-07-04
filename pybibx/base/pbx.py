@@ -33,7 +33,10 @@ except ImportError:
     import importlib_resources as pkg_resources
 from . import stws
 
-from bertopic import BERTopic
+try:
+    from bertopic import BERTopic
+except ImportError:  # pragma: no cover - optional dependency
+    BERTopic = None
 from collections import Counter, defaultdict
 from difflib import SequenceMatcher
 
@@ -41,8 +44,6 @@ from difflib import SequenceMatcher
 from gensim.models import FastText
 from itertools import combinations
 from matplotlib import pyplot as plt
-
-plt.style.use("bmh")
 from numba import njit
 from numba.typed import List
 
@@ -51,17 +52,32 @@ from scipy.ndimage import gaussian_filter1d
 from scipy.signal import find_peaks
 from scipy.sparse import coo_matrix
 from scipy.sparse import csr_matrix
-from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans, HDBSCAN
 from sklearn.decomposition import TruncatedSVD as tsvd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from summarizer import Summarizer
-from transformers import PegasusForConditionalGeneration
-from transformers import PegasusTokenizer
 from umap import UMAP
 from wordcloud import WordCloud
+
+# Optional heavy dependencies
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:  # pragma: no cover - optional dependency
+    SentenceTransformer = None
+
+try:
+    from summarizer import Summarizer
+except ImportError:  # pragma: no cover - optional dependency
+    Summarizer = None
+
+try:
+    from transformers import PegasusForConditionalGeneration, PegasusTokenizer
+except ImportError:  # pragma: no cover - optional dependency
+    PegasusForConditionalGeneration = None
+    PegasusTokenizer = None
+
+plt.style.use("bmh")
 
 ############################################################################
 
@@ -4706,7 +4722,7 @@ class pbx_probe:
                     compiled_regex = re.compile(key)
                     if re.search(compiled_regex, corpus):
                         matched_indices.append(i)
-                except:
+                except Exception:
                     pass
         insd_r = []
         insd_t = []
@@ -4868,7 +4884,7 @@ class pbx_probe:
             vec = CountVectorizer(
                 stop_words=frozenset(sw_full), ngram_range=(ngrams, ngrams)
             ).fit(corpora)
-        except:
+        except Exception:
             vec = CountVectorizer(stop_words=sw_full, ngram_range=(ngrams, ngrams)).fit(
                 corpora
             )
@@ -6355,7 +6371,7 @@ class pbx_probe:
                         try:
                             citation_int = int(citation_val)
                             researcher_to_citations[researcher].append(citation_int)
-                        except:
+                        except Exception:
                             pass
         for researcher in self.u_aut:
             citations = researcher_to_citations[researcher]
@@ -6382,7 +6398,7 @@ class pbx_probe:
                     if year_val != -1:
                         try:
                             researcher_to_years[researcher].append(float(year_val))
-                        except:
+                        except Exception:
                             pass
         for idx, researcher in enumerate(self.u_aut):
             if researcher_to_years[researcher]:
@@ -6409,7 +6425,7 @@ class pbx_probe:
                         try:
                             citation_int = int(citation_val)
                             researcher_to_citations[researcher].append(citation_int)
-                        except:
+                        except Exception:
                             pass
         e_indices = []
         for researcher, h in zip(self.u_aut, self.aut_h):
@@ -6612,7 +6628,7 @@ class pbx_probe:
         tf_idf = vectorizer.fit_transform(corpus)
         try:
             tokens = vectorizer.get_feature_names_out()
-        except:
+        except Exception:
             tokens = vectorizer.get_feature_names()
         values = tf_idf.todense()
         values = values.tolist()
@@ -6675,6 +6691,10 @@ class pbx_probe:
         if view == "browser":
             pio.renderers.default = "browser"
         if embeddings:
+            if SentenceTransformer is None:
+                raise ImportError(
+                    "sentence-transformers is required for embeddings. Install pybibx[gpu]"
+                )
             model = SentenceTransformer(
                 model
             )  # 'allenai/scibert_scivocab_uncased'; 'all-MiniLM-L6-v2'
@@ -7686,7 +7706,7 @@ class pbx_probe:
                     compiled_regex = re.compile(key)
                     if re.search(compiled_regex, corpus):
                         matched_indices.append(i)
-                except:
+                except Exception:
                     pass
         insd_r = []
         insd_t = []
@@ -8057,7 +8077,7 @@ class pbx_probe:
             col_pos = self.matrix_a.columns.get_loc("UNKNOWN")
             adjacency_matrix[row_pos, :] = 0
             adjacency_matrix[:, col_pos] = 0
-        except:
+        except Exception:
             pass
         vals = [
             int(self.dict_ctr_id[text[i]].replace("c_", ""))
@@ -8074,7 +8094,7 @@ class pbx_probe:
         try:
             unk = int(self.dict_ctr_id["UNKNOWN"].replace("c_", ""))
             edges = list(filter(lambda edge: unk not in edge, edges))
-        except:
+        except Exception:
             pass
         self.ask_gpt_map = pd.DataFrame(edges, columns=["Country 1", "Country 2"])
         nids_list = [
@@ -9451,6 +9471,10 @@ class pbx_probe:
         corpus_type="abs",
         model="allenai/scibert_scivocab_uncased",
     ):
+        if SentenceTransformer is None:
+            raise ImportError(
+                "sentence-transformers is required for this method. Install pybibx[gpu]"
+            )
         model = SentenceTransformer(model)
         if corpus_type == "abs":
             corpus = self.data["abstract"]
@@ -9502,11 +9526,19 @@ class pbx_probe:
             metric="cosine",
             random_state=1001,
         )
+        if BERTopic is None:
+            raise ImportError(
+                "bertopic is required for this method. Install pybibx[gpu]"
+            )
         if not embeddings:
             self.topic_model = BERTopic(
                 umap_model=umap_model, calculate_probabilities=True
             )
         else:
+            if SentenceTransformer is None:
+                raise ImportError(
+                    "sentence-transformers is required for this method. Install pybibx[gpu]"
+                )
             sentence_model = SentenceTransformer(model)
             self.topic_model = BERTopic(
                 umap_model=umap_model,
@@ -9530,6 +9562,10 @@ class pbx_probe:
 
     # Function: Topics - Load
     def topics_load_file(self, saved_file="my_topic_model"):
+        if BERTopic is None:
+            raise ImportError(
+                "bertopic is required for this method. Install pybibx[gpu]"
+            )
         self.topic_model = BERTopic.load(saved_file)
         self.topic_corpus = self.clear_text(
             self.data["abstract"],
@@ -9688,7 +9724,7 @@ class pbx_probe:
             )
         try:
             embeddings = self.topic_model.c_tf_idf.toarray()
-        except:
+        except Exception:
             embeddings = self.topic_model.c_tf_idf_.toarray()
         if method.lower() == "umap":
             decomposition = UMAP(n_components=2, random_state=1001)
@@ -9769,7 +9805,7 @@ class pbx_probe:
         topics_label = []
         try:
             embeddings = self.topic_model.c_tf_idf.toarray()
-        except:
+        except Exception:
             embeddings = self.topic_model.c_tf_idf_.toarray()
         dist_matrix = cosine_similarity(embeddings)
         for i in range(0, self.topic_info.shape[0]):
@@ -10088,6 +10124,10 @@ class pbx_probe:
             print("Total Number of Valid Abstracts: ", len(corpus))
             print("")
             corpus = " ".join(corpus)
+            if PegasusTokenizer is None or PegasusForConditionalGeneration is None:
+                raise ImportError(
+                    "transformers is required for this method. Install pybibx[gpu]"
+                )
             tokenizer = PegasusTokenizer.from_pretrained(model_name)
             pegasus = PegasusForConditionalGeneration.from_pretrained(model_name)
             tokens = tokenizer.encode(
@@ -10128,7 +10168,7 @@ class pbx_probe:
                     max_tokens=max_tokens,
                 )
                 response = response["choices"][0]["message"]["content"]
-            except:
+            except Exception:
                 response = openai.Completion.create(
                     engine=model,
                     prompt=prompt,
@@ -10147,7 +10187,7 @@ class pbx_probe:
                     max_tokens=max_tokens,
                 )
                 response = response.choices[0].message.content
-            except:
+            except Exception:
                 client = openai.OpenAI(api_key=api_key)
                 response = client.completions.create(
                     model=model,
@@ -10265,6 +10305,10 @@ class pbx_probe:
             print("Total Number of Valid Abstracts: ", len(corpus))
             print("")
             corpus = " ".join(corpus)
+            if Summarizer is None:
+                raise ImportError(
+                    "summarizer is required for this method. Install pybibx[gpu]"
+                )
             bert_model = Summarizer()
             summary = "".join(bert_model(corpus, min_length=5))
         else:

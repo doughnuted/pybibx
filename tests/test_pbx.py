@@ -1,13 +1,10 @@
-import pytest
-from pybibx.pybibx.base.pbx import pbx_probe
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from pybibx.base.pbx import pbx_probe
 
 def test_pbx_probe_initialization():
-    # This is a basic smoke test to ensure the class can be instantiated.
-    # A more comprehensive test would require a sample .bib file.
-    try:
-        probe = pbx_probe(file_bib='sample.bib')
-        assert probe is not None
-    except FileNotFoundError:
-        # This is expected since 'sample.bib' does not exist.
-        # The goal of this test is to ensure the class can be imported and initialized without errors.
-        pass
+    sample = Path(__file__).parent / "data" / "sample.bib"
+    probe = pbx_probe(file_bib=str(sample))
+    assert probe is not None
