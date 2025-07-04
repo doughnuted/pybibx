@@ -3500,6 +3500,49 @@ class pbx_probe:
         report_df = pd.DataFrame(report, columns=["Main Information", "Results"])
         return report_df
 
+    # Function: Bibliometric Analysis Summary
+    def biblio_analysis(self):
+        """Return basic bibliometric statistics for the loaded dataset."""
+
+        n_docs = self.data.shape[0]
+        n_sources = len(self.u_jou)
+        n_refs = len(self.u_ref)
+        n_authors = len(self.u_aut)
+        author_appearances = sum(self.doc_aut)
+
+        authors_per_doc = round(author_appearances / n_docs, 2) if n_docs else 0
+        coauthors_per_doc = (
+            round((author_appearances - self.aut_single) / n_docs, 2)
+            if n_docs
+            else 0
+        )
+
+        citations_sorted = sorted(self.citation, reverse=True)
+        h_idx = 0
+        for i, c in enumerate(citations_sorted):
+            if c >= i + 1:
+                h_idx = i + 1
+            else:
+                break
+
+        report = [
+            ["Timespan", f"{self.date_str}-{self.date_end}"],
+            ["Sources", n_sources],
+            ["Documents", n_docs],
+            ["Average Documents per Year", self.av_d_year],
+            ["References", n_refs],
+            ["Total Citations", sum(self.citation)],
+            ["Average Citations per Document", self.av_c_doc],
+            ["H-Index", h_idx],
+            ["Authors", n_authors],
+            ["Author Appearances", author_appearances],
+            ["Authors per Document", authors_per_doc],
+            ["Co-Authors per Doc", coauthors_per_doc],
+            ["Collaboration Index", self.dy_c_year.iloc[-1, -1]],
+        ]
+
+        return pd.DataFrame(report, columns=["Metric", "Value"])
+
     # Function: Health of .bib docs
     def health_bib(self):
         n = self.data.shape[0]
