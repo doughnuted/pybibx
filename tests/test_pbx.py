@@ -1,13 +1,22 @@
 import pytest
-from pybibx.pybibx.base.pbx import pbx_probe
+import pandas as pd
+
+try:
+    from pybibx.base.pbx import pbx_probe
+except Exception:  # pragma: no cover - optional dependency missing
+    pbx_probe = None
 
 def test_pbx_probe_initialization():
-    # This is a basic smoke test to ensure the class can be instantiated.
-    # A more comprehensive test would require a sample .bib file.
-    try:
-        probe = pbx_probe(file_bib='sample.bib')
-        assert probe is not None
-    except FileNotFoundError:
-        # This is expected since 'sample.bib' does not exist.
-        # The goal of this test is to ensure the class can be imported and initialized without errors.
-        pass
+    if pbx_probe is None:
+        pytest.skip("pbx_probe dependencies not installed")
+    probe = pbx_probe(file_bib='assets/bibs/scopus_m.bib', db='scopus')
+    assert probe is not None
+
+
+def test_biblio_analysis():
+    if pbx_probe is None:
+        pytest.skip("pbx_probe dependencies not installed")
+    probe = pbx_probe(file_bib='assets/bibs/scopus_m.bib', db='scopus')
+    df = probe.biblio_analysis()
+    assert isinstance(df, pd.DataFrame)
+    assert 'Total Documents' in df['Metric'].values
