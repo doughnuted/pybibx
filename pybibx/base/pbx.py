@@ -3527,6 +3527,20 @@ class pbx_probe:
         )
         return health_df
 
+    # Function: Plot Missing Data
+    def plot_missing(self, method="matrix"):
+        try:
+            import missingno as msno
+        except ImportError as exc:
+            raise ImportError(
+                "missingno is required for plot_missing. Install it with 'pip install missingno'."
+            ) from exc
+        if method == "heatmap":
+            msno.heatmap(self.data)
+        else:
+            msno.matrix(self.data)
+        return
+
     ##############################################################################
 
     # Function: Read .bib File

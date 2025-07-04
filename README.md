@@ -34,3 +34,14 @@ import pybibx
 
 # Your code here
 ```
+
+### Visualizing Missing Data
+
+Install the optional `missingno` dependency to visualize missing values:
+
+```python
+from pybibx.base.pbx import pbx_probe
+
+probe = pbx_probe("your_file.bib")
+probe.plot_missing()  # matrix view of missing data
+```
