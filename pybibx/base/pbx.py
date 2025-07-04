@@ -14,18 +14,12 @@
 
 # Required Libraries
 import chardet
-import google.generativeai as genai
-import networkx as nx
 import numpy as np
-import openai
 import os
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.subplots as ps
 import plotly.io as pio
 import re
-import unicodedata
-import textwrap
 
 try:
     import importlib.resources as pkg_resources
@@ -33,35 +27,20 @@ except ImportError:
     import importlib_resources as pkg_resources
 from . import stws
 
-from bertopic import BERTopic
 from collections import Counter, defaultdict
 from difflib import SequenceMatcher
+from numba import njit
+from sklearn.feature_extraction.text import CountVectorizer
+from wordcloud import WordCloud
+
 
 # from keybert import KeyBERT
-from gensim.models import FastText
 from itertools import combinations
 from matplotlib import pyplot as plt
 
 plt.style.use("bmh")
-from numba import njit
-from numba.typed import List
 
 # from rapidfuzz import fuzz
-from scipy.ndimage import gaussian_filter1d
-from scipy.signal import find_peaks
-from scipy.sparse import coo_matrix
-from scipy.sparse import csr_matrix
-from sentence_transformers import SentenceTransformer
-from sklearn.cluster import KMeans, HDBSCAN
-from sklearn.decomposition import TruncatedSVD as tsvd
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from summarizer import Summarizer
-from transformers import PegasusForConditionalGeneration
-from transformers import PegasusTokenizer
-from umap import UMAP
-from wordcloud import WordCloud
 
 ############################################################################
 
@@ -2891,10 +2870,10 @@ class pbx_probe:
         self.ask_gpt_td_data = None
         self.ask_gpt_th = -1
         self.hierarchical_topics_df = None
-        self.ask_gpt_ncl = -1 # For Louvain community detection
-        self.louvain_communities = None # For Louvain community detection
-        self.ask_gpt_nm = -1 # For network metrics
-        self.network_metrics = None # For network metrics
+        self.ask_gpt_ncl = -1  # For Louvain community detection
+        self.louvain_communities = None  # For Louvain community detection
+        self.ask_gpt_nm = -1  # For network metrics
+        self.network_metrics = None  # For network metrics
         self.author_country_map = -1
         self.corr_a_country_map = -1
         self.frst_a_country_map = -1
@@ -4714,7 +4693,7 @@ class pbx_probe:
                     compiled_regex = re.compile(key)
                     if re.search(compiled_regex, corpus):
                         matched_indices.append(i)
-                except:
+                except Exception:  # Catching general exception for safety
                     pass
         insd_r = []
         insd_t = []
@@ -4876,7 +4855,7 @@ class pbx_probe:
             vec = CountVectorizer(
                 stop_words=frozenset(sw_full), ngram_range=(ngrams, ngrams)
             ).fit(corpora)
-        except:
+        except ValueError:  # More specific exception
             vec = CountVectorizer(stop_words=sw_full, ngram_range=(ngrams, ngrams)).fit(
                 corpora
             )
@@ -6294,17 +6273,34 @@ class pbx_probe:
         self.ask_gpt_sk = pd.DataFrame(
             list(zip(s, t, v)), columns=["Node From", "Node To", "Connection Weigth"]
         )
-        u_keys = ["aut", "cout", "inst", "jou", "kwa", "kwp", "lan"]
-        u_name = [
-            "Authors",
-            "Countries",
-            "Institutions",
-            "Journals",
-            "Auhors_Keywords",
-            "Keywords_Plus",
-            "Languages",
-        ]
-        dict_n = dict(zip(u_keys, u_name))
+        # u_keys = ["aut", "cout", "inst", "jou", "kwa", "kwp", "lan"] # F841 Unused variable
+        # u_name = [ # F841 Unused variable
+        #     "Authors",
+        #     "Countries",
+        #     "Institutions",
+        #     "Journals",
+        #     "Auhors_Keywords",
+        #     "Keywords_Plus",
+        #     "Languages",
+        # ]
+        # dict_n = dict(zip(u_keys, u_name)) # F841 Unused variable
         if len(sk_s) > len(self.color_names):
             count = 0
-            while len(self.color_
+            # Ensure self.color_names is not empty to avoid modulo by zero if it was initially empty
+            # and sk_s is not, though this case should ideally be handled by having default colors.
+            # For safety, if self.color_names is empty, this loop might behave unexpectedly or error.
+            # A robust solution would ensure self.color_names has at least one color if sk_s is not empty.
+            # However, sticking to the original apparent logic of extending with existing colors:
+            if self.color_names:  # Check if color_names is not empty
+                while len(self.color_names) < len(sk_s):
+                    self.color_names.append(
+                        self.color_names[count % len(self.color_names)]
+                    )
+                    count = count + 1
+            else:  # Fallback: if color_names is empty but sk_s is not, add a default color.
+                # This case implies an issue with color_names initialization or prior modification.
+                # For now, let's add a placeholder color to avoid erroring out, though this isn't ideal.
+                if len(sk_s) > 0:  # only if sk_s needs colors
+                    self.color_names.append("#000000")  # Default to black
+                    while len(self.color_names) < len(sk_s):
+                        self.color_names.append(self.color_names[0])
