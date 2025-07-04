@@ -9400,6 +9400,137 @@ class pbx_probe:
         ]
         return citations
 
+    # Function: Plot Citation History
+    def hist_plot(
+        self,
+        citations,
+        view="browser",
+        node_size=20,
+        font_size=10,
+        node_labels=True,
+        dist=1.2,
+    ):
+        """Plot a chronological citation network.
+
+        Parameters
+        ----------
+        citations : list of tuple
+            Citation edges as ``(paper_id, reference_id)`` obtained from
+            :func:`network_hist` or other methods.
+        view : str, optional
+            Plotly renderer to use, by default ``"browser"``.
+        node_size : int, optional
+            Size of the node markers.
+        font_size : int, optional
+            Font size for node labels.
+        node_labels : bool, optional
+            Display node identifiers if ``True``.
+        dist : float, optional
+            Vertical spacing between nodes published in the same year.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            The generated Plotly figure.
+        """
+
+        if view == "browser":
+            pio.renderers.default = "browser"
+        mode = "markers+text" if node_labels else "markers"
+
+        articles = self.data[["author", "title", "journal", "doi"]].copy()
+        articles["id"] = self.table_id_doc.iloc[:, 0]
+        articles["year"] = self.data["year"].astype(int)
+        articles = articles.sort_values(by="year").reset_index(drop=True)
+        articles["x_pos"] = articles["year"]
+
+        years = sorted(articles["year"].unique())
+        y_offsets = {}
+        for yr in years:
+            indices = articles.index[articles["year"] == yr].tolist()
+            indices = sorted(
+                indices, key=lambda x: self.natsort(str(articles.loc[x, "id"]))
+            )
+            offsets = [i * dist for i in range(len(indices))]
+            for idx, art_idx in enumerate(indices):
+                y_offsets[art_idx] = offsets[idx]
+        articles["y_pos"] = [y_offsets[i] for i in articles.index]
+
+        hover_texts = []
+        for _, row in articles.iterrows():
+            txt = f"id: {row['id']}<br>"
+            meta = (
+                f"{row['author']} ({row['year']}). {row['title']}. "
+                f"{row['journal']}. doi:{row['doi']}"
+            )
+            wrapped_meta = "<br>".join(textwrap.wrap(meta, width=50))
+            hover_texts.append(txt + wrapped_meta)
+
+        node_trace = go.Scatter(
+            x=articles["x_pos"],
+            y=articles["y_pos"],
+            mode=mode,
+            marker=dict(
+                symbol="circle-dot",
+                size=node_size,
+                color="blue",
+                line=dict(color="rgb(50, 50, 50)", width=0.15),
+            ),
+            text=articles["id"] if node_labels else None,
+            hoverinfo="text",
+            hovertext=hover_texts,
+            name="",
+        )
+
+        Xa, Ya = [], []
+        article_dict = articles.set_index("id").to_dict(orient="index")
+        for src, tgt in citations:
+            src_str, tgt_str = str(src), str(tgt)
+            if src_str in article_dict and tgt_str in article_dict:
+                Xa.extend([
+                    article_dict[src_str]["x_pos"],
+                    article_dict[tgt_str]["x_pos"],
+                    None,
+                ])
+                Ya.extend([
+                    article_dict[src_str]["y_pos"],
+                    article_dict[tgt_str]["y_pos"],
+                    None,
+                ])
+        edge_trace = go.Scatter(
+            x=Xa,
+            y=Ya,
+            mode="lines",
+            line=dict(color="rgba(0, 0, 0, 0.15)", width=0.5, dash="dot"),
+            hoverinfo="none",
+            name="",
+        )
+
+        layout = go.Layout(
+            showlegend=False,
+            hovermode="closest",
+            margin=dict(b=10, l=5, r=5, t=10),
+        )
+        fig = go.Figure(data=[edge_trace, node_trace], layout=layout)
+        fig.update_layout(
+            plot_bgcolor="rgb(255, 255, 255)",
+            hoverlabel=dict(font_size=12),
+            xaxis=dict(
+                showgrid=False,
+                zeroline=False,
+                showticklabels=True,
+                title="Years",
+                tickangle=90,
+                type="category",
+                categoryorder="array",
+                categoryarray=years,
+            ),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, title=""),
+        )
+        fig.update_traces(textfont_size=font_size, textfont_color="yellow")
+        fig.show()
+        return fig
+
     # Function: Analyze Citations
     def analyze_hist_citations(self, citations, min_path_size=2):
         G = nx.DiGraph(citations)

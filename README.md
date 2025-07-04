@@ -34,3 +34,13 @@ import pybibx
 
 # Your code here
 ```
+
+### Citation Historiograph
+
+```python
+from pybibx.base import pbx_probe
+
+pbx = pbx_probe("myfile.bib", db="scopus")
+citations = pbx.network_hist(view="png")
+pbx.hist_plot(citations)
+```
