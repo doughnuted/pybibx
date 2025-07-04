@@ -1,4 +1,3 @@
-import pytest
 from pybibx.pybibx.base.pbx import pbx_probe
 
 def test_pbx_probe_initialization():
