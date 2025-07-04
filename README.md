@@ -30,7 +30,11 @@ A Bibliometric and Scientometric Library Powered with Artificial Intelligence To
 Once the installation is complete, you can use the library in your Python projects.
 
 ```python
-import pybibx
+from pybibx.base import pbx_probe
 
-# Your code here
+# Instantiate the probe with your BibTeX file
+probe = pbx_probe("path/to/your.bib", db="scopus")
+
+# Inspect the loaded data
+print(probe.data.head())
 ```
