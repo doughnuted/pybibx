@@ -13,16 +13,31 @@
 ############################################################################
 
 # Required Libraries
-import chardet
-import google.generativeai as genai
-import networkx as nx
+try:  # Optional dependency
+    import chardet
+except Exception:  # pragma: no cover - optional
+    chardet = None
+try:
+    import google.generativeai as genai
+except Exception:  # pragma: no cover - optional
+    genai = None
+try:
+    import networkx as nx
+except Exception:  # pragma: no cover - optional
+    nx = None
 import numpy as np
-import openai
+try:
+    import openai
+except Exception:  # pragma: no cover - optional
+    openai = None
 import os
 import pandas as pd
-import plotly.graph_objects as go
-import plotly.subplots as ps
-import plotly.io as pio
+try:
+    import plotly.graph_objects as go
+    import plotly.subplots as ps
+    import plotly.io as pio
+except Exception:  # pragma: no cover - optional
+    go = ps = pio = None
 import re
 import unicodedata
 import textwrap
@@ -33,35 +48,95 @@ except ImportError:
     import importlib_resources as pkg_resources
 from . import stws
 
-from bertopic import BERTopic
+try:
+    from bertopic import BERTopic
+except Exception:  # pragma: no cover - optional
+    BERTopic = object
 from collections import Counter, defaultdict
 from difflib import SequenceMatcher
 
 # from keybert import KeyBERT
-from gensim.models import FastText
+try:
+    from gensim.models import FastText
+except Exception:  # pragma: no cover - optional
+    class FastText:  # pragma: no cover - fallback stub
+        pass
 from itertools import combinations
-from matplotlib import pyplot as plt
+try:
+    from matplotlib import pyplot as plt
+except Exception:  # pragma: no cover - optional
+    plt = None
 
 plt.style.use("bmh")
-from numba import njit
-from numba.typed import List
+try:
+    from numba import njit
+    from numba.typed import List
+except Exception:  # pragma: no cover - optional
+    def njit(*args, **kwargs):  # pragma: no cover - fallback stub
+        def wrapper(func):
+            return func
+        return wrapper
+    List = list
 
 # from rapidfuzz import fuzz
-from scipy.ndimage import gaussian_filter1d
-from scipy.signal import find_peaks
-from scipy.sparse import coo_matrix
-from scipy.sparse import csr_matrix
-from sentence_transformers import SentenceTransformer
-from sklearn.cluster import KMeans, HDBSCAN
-from sklearn.decomposition import TruncatedSVD as tsvd
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from summarizer import Summarizer
-from transformers import PegasusForConditionalGeneration
-from transformers import PegasusTokenizer
-from umap import UMAP
-from wordcloud import WordCloud
+try:
+    from scipy.ndimage import gaussian_filter1d
+    from scipy.signal import find_peaks
+    from scipy.sparse import coo_matrix, csr_matrix
+except Exception:  # pragma: no cover - optional
+    def gaussian_filter1d(*args, **kwargs):
+        return None
+    def find_peaks(*args, **kwargs):
+        return ([], {})
+    class coo_matrix:  # pragma: no cover - fallback stub
+        pass
+    class csr_matrix:  # pragma: no cover - fallback stub
+        pass
+try:
+    from sentence_transformers import SentenceTransformer
+except Exception:  # pragma: no cover - optional
+    class SentenceTransformer:  # pragma: no cover - fallback stub
+        pass
+try:
+    from sklearn.cluster import KMeans, HDBSCAN
+    from sklearn.decomposition import TruncatedSVD as tsvd
+    from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+except Exception:  # pragma: no cover - optional
+    class KMeans:  # pragma: no cover - fallback stub
+        pass
+    class HDBSCAN:  # pragma: no cover - fallback stub
+        pass
+    class tsvd:  # pragma: no cover - fallback stub
+        pass
+    class CountVectorizer:  # pragma: no cover - fallback stub
+        pass
+    class TfidfVectorizer:  # pragma: no cover - fallback stub
+        pass
+    def cosine_similarity(*args, **kwargs):
+        return None
+try:
+    from summarizer import Summarizer
+except Exception:  # pragma: no cover - optional
+    class Summarizer:  # pragma: no cover - fallback stub
+        pass
+try:
+    from transformers import PegasusForConditionalGeneration, PegasusTokenizer
+except Exception:  # pragma: no cover - optional
+    class PegasusForConditionalGeneration:  # pragma: no cover - fallback stub
+        pass
+    class PegasusTokenizer:  # pragma: no cover - fallback stub
+        pass
+try:
+    from umap import UMAP
+except Exception:  # pragma: no cover - optional
+    class UMAP:  # pragma: no cover - fallback stub
+        pass
+try:
+    from wordcloud import WordCloud
+except Exception:  # pragma: no cover - optional
+    class WordCloud:  # pragma: no cover - fallback stub
+        pass
 
 ############################################################################
 
@@ -4268,19 +4343,37 @@ class pbx_probe:
 
     ##############################################################################
 
+    # Helper: Split References According to Source
+    def _split_references(self, text):
+        if not isinstance(text, str):
+            return []
+        text = text.strip()
+        if not text:
+            return []
+        if self.database.lower() == "pubmed" or text.lstrip().startswith("CIN -"):
+            return [line.strip() for line in text.splitlines() if line.strip()]
+        parts = re.split(r";\s*(?=[A-Z])", text)
+        return [part.strip() for part in parts if part.strip() and part.strip() != "note"]
+
+    ##############################################################################
+
     # Function: Get Entries
     def __get_str(self, entry="references", s=";", lower=True, sorting=True):
         column = self.data[entry]
-        info = [
-            [
-                " ".join(item.split()).lower() if lower else " ".join(item.split())
-                for item in e.split(s)
-                if item.strip() and item.strip() != "note"
-            ]
-            if isinstance(e, str)
-            else []
-            for e in column
-        ]
+        info = []
+        for e in column:
+            if isinstance(e, str):
+                if entry == "references":
+                    items = self._split_references(e)
+                else:
+                    items = [part for part in e.split(s) if part.strip() and part.strip() != "note"]
+                processed = [
+                    " ".join(item.split()).lower() if lower else " ".join(item.split())
+                    for item in items
+                ]
+                info.append(processed)
+            else:
+                info.append([])
         unique_info = list({item for sublist in info for item in sublist})
         if "" in unique_info:
             unique_info.remove("")
