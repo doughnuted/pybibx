@@ -30,7 +30,14 @@ A Bibliometric and Scientometric Library Powered with Artificial Intelligence To
 Once the installation is complete, you can use the library in your Python projects.
 
 ```python
-import pybibx
+from pybibx.base.pbx import pbx_probe
 
-# Your code here
+# Load your bibliographic file
+probe = pbx_probe(file_bib="sample.bib")
+
+# Build the citation network and retrieve edges
+edges = probe.network_hist()
+
+# Plot the chronological citation graph using the returned edges
+probe.hist_plot(edges)
 ```
